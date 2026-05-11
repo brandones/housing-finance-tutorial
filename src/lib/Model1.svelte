@@ -98,9 +98,27 @@
 </div>
 
 <style>
-  h1 { font-size: 1.4rem; margin-bottom: 12px; }
-  h2 { font-size: 1.1rem; margin-bottom: 8px; }
-  .section { background: #fff; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  h1 {
+    font-family: 'Cardo', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333333;
+    margin-bottom: 16px;
+  }
+  h2 {
+    font-family: 'Cardo', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #333333;
+    margin-bottom: 8px;
+  }
+  .section {
+    background: #fff;
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid #e8e8e8;
+  }
   .side-by-side {
     display: flex;
     gap: 12px;
@@ -114,22 +132,49 @@
     align-items: center;
     padding: 6px 0;
   }
-  .row label, .row .row-label { font-size: 0.9rem; }
-  .value { font-size: 0.9rem; font-weight: 600; }
+  .row label, .row .row-label {
+    font-size: 0.95rem;
+    color: #6b6b6b;
+  }
+  .value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #333333;
+  }
   .input-with-suffix { text-align: right; }
-  .suffix { font-size: 0.8rem; color: #666; display: block; }
-  .helper { font-size: 0.8rem; color: #666; margin-top: 4px; }
+  .suffix {
+    font-size: 0.8rem;
+    color: #999999;
+    display: block;
+  }
+  .helper {
+    font-size: 0.8rem;
+    color: #999999;
+    margin-top: 4px;
+  }
   input[type="number"] {
     width: 110px;
     padding: 6px 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 0.9rem;
+    border: 1px solid #cccccc;
+    border-radius: 3px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
     text-align: right;
+    background: #fff;
+    color: #333333;
   }
-  .positive { color: #2e7d32; font-weight: 700; }
-  .negative { color: #c62828; font-weight: 700; }
-  .noi-message { font-size: 0.85rem; margin-top: 4px; font-style: italic; }
-  .noi-message.sufficient { color: #2e7d32; }
-  .noi-message.insufficient { color: #c62828; }
+  input[type="number"]:focus {
+    outline: none;
+    border-color: #4A6C8C;
+  }
+  .positive { color: #4A6C8C; font-weight: 700; }
+  .negative { color: #B87351; font-weight: 700; }
+  .noi-message {
+    font-size: 0.85rem;
+    margin-top: 4px;
+    font-style: italic;
+    color: #6b6b6b;
+  }
+  .noi-message.sufficient { color: #4A6C8C; }
+  .noi-message.insufficient { color: #B87351; }
 </style>
