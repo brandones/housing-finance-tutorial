@@ -1,16 +1,21 @@
 <script>
-  let landCost = $state(5000);
-  let hardSoftCosts = $state(245000);
+  import InfoTip from './InfoTip.svelte';
+  import MoneyInput from './MoneyInput.svelte';
+
+  let totalCost = $state(300000);
   let equity = $state(60000);
   let capitalSubsidy = $state(0);
   let interestRate = $state(6.5);
   let loanTerm = $state(35);
-  let rent = $state(2200);
+  let rent = $state(2500);
   let operatingSubsidy = $state(0);
-  let opCosts = $state(400);
+  let opCosts = $state(500);
   let propertyTax = $state(250);
   let dcr = $state(1.2);
-  let hurdleRate = $state(8);
+  let hurdleRate = $state(7.5);
+
+  let devOpen = $state(true);
+  let financeOpen = $state(true);
 
   function pmt(rate, nper, pv) {
     if (rate === 0) return pv / nper;
@@ -22,7 +27,6 @@
     return '$' + Math.round(n).toLocaleString();
   }
 
-  let totalCost = $derived(landCost + hardSoftCosts);
   let equityPct = $derived((equity / totalCost * 100).toFixed(0));
   let loanNeeded = $derived(totalCost - equity - capitalSubsidy);
   let debtService = $derived(pmt(interestRate / 100 / 12, loanTerm * 12, loanNeeded));
@@ -34,86 +38,91 @@
   let cfSufficient = $derived(cashFlow >= requiredCashFlow);
 </script>
 
-<h1>🏢 Let's build an apartment!</h1>
-
 <div class="card">
-  <div class="card-title">🏗️ Development</div>
+  <button class="card-title collapsible" class:collapsed={!devOpen} onclick={() => devOpen = !devOpen}>
+    <span>🏗️ Development</span>
+    <span class="collapse-summary">
+      {#if !devOpen}
+        <span class="summary-text">{fmt(totalCost)} · {equityPct}% eq</span>
+      {/if}
+      <span class="chevron" class:chevron-closed={!devOpen}>▾</span>
+    </span>
+  </button>
 
-  <div class="row">
-    <div class="label">Land cost</div>
-    <div class="right">
-      <input type="number" class="chip" bind:value={landCost} min="0" step="1000">
+  {#if devOpen}
+    <div class="row">
+      <div class="label">Total development cost</div>
+      <div class="right">
+        <MoneyInput bind:value={totalCost} step={10000} />
+      </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="label">Hard costs + soft costs</div>
-    <div class="right">
-      <input type="number" class="chip" bind:value={hardSoftCosts} min="0" step="5000">
+    <div class="row">
+      <div class="label">
+        Equity
+        <div class="sublabel">{equityPct}% of TDC</div>
+      </div>
+      <div class="right">
+        <MoneyInput bind:value={equity} step={5000} />
+      </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="label">Total development cost</div>
-    <div class="right">
-      <span class="computed">{fmt(totalCost)}</span>
+    <div class="row">
+      <div class="label">Subsidy (capital) <InfoTip><p>Can come from federal grants, state or local grants, low-interest gap financing, or tax breaks such as PILOTs.</p><p>Subsidy is very limited, competitive, and hard to obtain.</p></InfoTip></div>
+      <div class="right">
+        <MoneyInput bind:value={capitalSubsidy} step={1000} />
+      </div>
     </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="row">
-    <div class="label">
-      Equity
-      <div class="sublabel">{equityPct}% of TDC</div>
+    <div class="row">
+      <div class="label">Loan needed</div>
+      <div class="right">
+        <span class="computed">{fmt(loanNeeded)}</span>
+      </div>
     </div>
-    <div class="right">
-      <input type="number" class="chip" bind:value={equity} min="0" step="5000">
-    </div>
-  </div>
-  <div class="row">
-    <div class="label">Subsidy (capital)</div>
-    <div class="right">
-      <input type="number" class="chip" bind:value={capitalSubsidy} min="0" step="1000">
-    </div>
-  </div>
-  <div class="row">
-    <div class="label">Loan needed</div>
-    <div class="right">
-      <span class="computed">{fmt(loanNeeded)}</span>
-    </div>
-  </div>
+  {/if}
 </div>
 
 <div class="card">
-  <div class="card-title">📈 Finance</div>
+  <button class="card-title collapsible" class:collapsed={!financeOpen} onclick={() => financeOpen = !financeOpen}>
+    <span>📈 Finance</span>
+    <span class="collapse-summary">
+      {#if !financeOpen}
+        <span class="summary-text">{interestRate}% · {loanTerm}yr · {dcr}× · {hurdleRate}%</span>
+      {/if}
+      <span class="chevron" class:chevron-closed={!financeOpen}>▾</span>
+    </span>
+  </button>
 
-  <div class="row">
-    <div class="label">Interest rate</div>
-    <div class="right">
-      <input type="number" class="chip chip-sm" bind:value={interestRate} min="0" max="30" step="0.25">
-      <span class="unit">%</span>
+  {#if financeOpen}
+    <div class="row">
+      <div class="label">Interest rate <InfoTip><p>A typical loan will be in the vicinity of the current mortgage rate. Right now that's around 6.5%.</p><p>Public sector builders can finance with bonds, which get a lower interest rate than loans. Municipal bonds can get something like 5.5%.</p><p>Subsidized loans may be available to nonprofit affordable developers at even lower rates.</p></InfoTip></div>
+      <div class="right">
+        <input type="number" class="chip chip-sm" bind:value={interestRate} min="0" max="30" step="0.1">
+        <span class="unit">%</span>
+      </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="label">Loan term</div>
-    <div class="right">
-      <input type="number" class="chip chip-sm" bind:value={loanTerm} min="1" max="50" step="1">
-      <span class="unit">yr</span>
+    <div class="row">
+      <div class="label">Loan term <InfoTip><p>35 years is about as long as you're going to find.</p></InfoTip></div>
+      <div class="right">
+        <input type="number" class="chip chip-sm" bind:value={loanTerm} min="1" max="50" step="1">
+        <span class="unit">yr</span>
+      </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="label">Debt coverage ratio</div>
-    <div class="right">
-      <input type="number" class="chip chip-sm" bind:value={dcr} min="1" max="3" step="0.05">
-      <span class="unit">×</span>
+    <div class="row">
+      <div class="label">Debt coverage ratio <InfoTip><p>The debt service coverage ratio (DSCR or DCR) is how much net operating income (NOI) you need relative to your monthly debt payments in order for the lender to give you the loan.</p><p>1.15 is about as low as any lender will go.</p></InfoTip></div>
+      <div class="right">
+        <input type="number" class="chip chip-sm" bind:value={dcr} min="1" max="3" step="0.05">
+        <span class="unit">×</span>
+      </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="label">Hurdle rate</div>
-    <div class="right">
-      <input type="number" class="chip chip-sm" bind:value={hurdleRate} min="0" max="30" step="0.5">
-      <span class="unit">%</span>
+    <div class="row">
+      <div class="label">Hurdle rate <InfoTip>
+      	<p>The annual rate of return on equity that an investor requires to put up money. This is calculated "cash on cash" — annual NOI divided by equity.
+      </p><p>Investors and for-profit developers compare this to the local capitalization rate (cap rate) — the ratio of a building's annual income to its property value. If the returns are lower than local cap rates, an investor would do better buying an existing building than developing a new one.</p><p>For a nonprofit or public developer using its own reserves for equity, the hurdle rate can be zero.</p><p>Both the hurdle rate and the cap rate are expressed as annual income flows — so a 12% hurdle rate means monthly cash flow needs to be 1% of equity invested.</p></InfoTip><InfoTip icon="data"><p>Hurdle rates / cap rates can be mysterious. In New York City, they can be as low as 5% or so. In Kingston, they're likely a few points higher. <a href="https://www.caprateindex.com/cap-rate-list/" target="_blank" rel="noopener">Cap Rate Index</a> puts Kingston at about 9–10%, but I doubt it's actually that high.</p></InfoTip></div>
+      <div class="right">
+        <input type="number" class="chip chip-sm" bind:value={hurdleRate} min="0" max="30" step="0.5">
+        <span class="unit">%</span>
+      </div>
     </div>
-  </div>
+  {/if}
 </div>
 
 <div class="card">
@@ -123,28 +132,28 @@
     <div class="label">Rent</div>
     <div class="right">
       <span class="sign sign-in">+</span>
-      <input type="number" class="chip" bind:value={rent} min="0" step="50">
+      <MoneyInput bind:value={rent} step={50} />
     </div>
   </div>
   <div class="row">
-    <div class="label">Subsidy (operating)</div>
+    <div class="label">Subsidy (operating) <InfoTip><p>Can include Section 8, tax abatements like PILOTs or 421-a, and operating grants like the Empire State Supportive Housing Initiative.</p><p>Often tax abatements will be "capitalized" — you find a lender who will give you a loan and receive the monthly tax abatement as payment. This makes the money available up front but costs some interest.</p></InfoTip></div>
     <div class="right">
       <span class="sign sign-in">+</span>
-      <input type="number" class="chip" bind:value={operatingSubsidy} min="0" step="50">
+      <MoneyInput bind:value={operatingSubsidy} step={50} />
     </div>
   </div>
   <div class="row">
     <div class="label">Operating costs</div>
     <div class="right">
       <span class="sign sign-out">−</span>
-      <input type="number" class="chip" bind:value={opCosts} min="0" step="50">
+      <MoneyInput bind:value={opCosts} step={50} />
     </div>
   </div>
   <div class="row">
-    <div class="label">Property tax</div>
+    <div class="label">Property tax <InfoTip><p>If you get a property tax abatement, you can reduce this number, or add the value to operating subsidy, or add the capitalized value to capital subsidy. Whichever you like.</p></InfoTip></div>
     <div class="right">
       <span class="sign sign-out">−</span>
-      <input type="number" class="chip" bind:value={propertyTax} min="0" step="25">
+      <MoneyInput bind:value={propertyTax} step={25} />
     </div>
   </div>
 
@@ -185,13 +194,6 @@
 </div>
 
 <style>
-  h1 {
-    font-family: 'Cardo', serif;
-    font-size: 24px;
-    font-weight: 700;
-    color: #2b2724;
-    margin-bottom: 16px;
-  }
 
   .card {
     background: #ffffff;
@@ -199,6 +201,10 @@
     border-radius: 6px;
     padding: 18px 18px 20px;
     margin-bottom: 12px;
+  }
+
+  .card:has(.collapsed) {
+    padding: 10px 16px;
   }
 
   .card-title {
@@ -209,6 +215,49 @@
     margin-bottom: 12px;
     padding-bottom: 8px;
     border-bottom: 1px solid #e6e2dc;
+  }
+
+  .collapsible {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #e6e2dc;
+    cursor: pointer;
+    padding: 0 0 8px;
+    margin-bottom: 12px;
+  }
+
+  .collapsible.collapsed {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .collapse-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .summary-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: #8a847e;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chevron {
+    font-size: 12px;
+    color: #b8b2ab;
+    transition: transform 0.2s ease;
+  }
+
+  .chevron-closed {
+    transform: rotate(-90deg);
   }
 
   .divider {
@@ -253,35 +302,6 @@
     color: #8a847e;
     font-weight: 500;
     min-width: 16px;
-  }
-
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid #b8b2ab;
-    background: #fbfaf7;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: #2b2724;
-    text-align: right;
-    width: 120px;
-  }
-  .chip-sm {
-    width: 80px;
-  }
-  .chip:hover {
-    border-color: #8a847e;
-  }
-  .chip:focus {
-    outline: none;
-    border-color: #3f6b8a;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px #dbe4ec;
   }
 
   .computed {

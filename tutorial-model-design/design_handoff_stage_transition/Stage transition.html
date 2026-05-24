@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Stage transition — PR4 animation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; font-family: Inter, sans-serif; }
+  #root { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 28px 16px 60px; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const C = {
+  ink: '#2b2724', body: '#4a4642', muted: '#8a847e', faint: '#b8b2ab',
+  rule: '#e6e2dc', card: '#ffffff', page: '#f8f6f4',
+  in: '#3f6b8a', inSoft: '#dbe4ec',
+  out: '#b87351', outSoft: '#efddd1',
+  ok: '#4a7a3a', okSoft: '#dde7d2',
+  amber: '#b8893a', amberSoft: '#f1e6cc',
+};
+
+const STAGES = [
+  { id: 1, short: 'Basics' },
+  { id: 2, short: 'Finance' },
+  { id: 3, short: 'Risk' },
+  { id: 4, short: 'Exit' },
+];
+
+const fmt = (n) => '$' + Math.round(n).toLocaleString();
+function pmt(rate, nper, pv) {
+  if (rate === 0) return pv / nper;
+  const x = Math.pow(1 + rate, nper);
+  return (pv * rate * x) / (x - 1);
+}
+
+// =========================================================================
+// Chapter strip — current tile expands, others quiet
+// =========================================================================
+function ChapterStrip({ stageIndex, transitioning }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+      {STAGES.map((s, i) => {
+        const isCurrent = i === stageIndex;
+        const isPast = i < stageIndex;
+        return (
+          <div key={s.id} style={{
+            flex: isCurrent ? 3 : 1,
+            background: isCurrent ? C.ink : isPast ? C.okSoft : '#fff',
+            border: isCurrent ? `1px solid ${C.ink}` : `1px solid ${C.rule}`,
+            color: isCurrent ? '#fff' : isPast ? C.ok : C.faint,
+            borderRadius: 6, padding: isCurrent ? '7px 11px' : '7px 0',
+            display: 'flex', flexDirection: 'column',
+            alignItems: isCurrent ? 'flex-start' : 'center', justifyContent: 'center',
+            transition: 'flex .42s cubic-bezier(.5,.0,.2,1), background .25s, color .25s, border-color .25s, padding .42s cubic-bezier(.5,.0,.2,1)',
+            overflow: 'hidden',
+          }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.6, opacity: isCurrent ? 0.7 : 1 }}>
+              {isPast ? '✓' : '0' + s.id}
+            </div>
+            {isCurrent && (
+              <div style={{
+                fontFamily: 'Cardo, serif', fontSize: 14.5, fontWeight: 700, marginTop: 1,
+                whiteSpace: 'nowrap',
+              }}>
+                {s.short}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// =========================================================================
+// Stage 1 model card — "Basics"
+// =========================================================================
+function Stage1Card({ rent, opCosts, onRent, onOpCosts }) {
+  const totalCost = 300000, equity = 60000;
+  const loanNeeded = totalCost - equity;
+  const debt = pmt(0.065 / 12, 35 * 12, loanNeeded);
+  const noi = rent - opCosts;
+  const cashFlow = noi - debt;
+  const noiNeeds = debt * 1.2;
+  const noiOk = noi >= noiNeeds;
+  const cfOk = cashFlow > 0;
+
+  return (
+    <div>
+      <h1 style={{ fontFamily: 'Cardo, serif', fontSize: 22, fontWeight: 700, marginBottom: 14 }}>
+        🏢 Let's build an apartment!
+      </h1>
+
+      <div style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 6, padding: '14px 16px', marginBottom: 12 }}>
+        <div style={{ fontFamily: 'Cardo, serif', fontSize: 15, fontWeight: 700, marginBottom: 8 }}>🏗️ Development</div>
+        <Row label="Total cost" value={<Chip>{fmt(totalCost)}</Chip>} />
+        <Row label="Equity" sublabel="20% of total" value={<Chip>{fmt(equity)}</Chip>} />
+        <Row label="Loan needed" value={<Plain>{fmt(loanNeeded)}</Plain>} />
+      </div>
+
+      <div style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 6, padding: '14px 16px' }}>
+        <Row label="Rent" sign="+" signColor={C.in} value={<ChipInput value={rent} onChange={onRent} highlight />} />
+        <Row label="Operating costs" sign="−" signColor={C.out} value={<ChipInput value={opCosts} onChange={onOpCosts} highlight />} />
+        <ResultRow label="NOI" value={noi} ok={noiOk}
+          msg={noiOk ? 'Covers 1.2× debt service' : `Short of ${fmt(noiNeeds)} needed`} />
+        <Row label="Debt service" sign="−" signColor={C.out} sublabel="6.5% / 35 yr" value={<Plain>{fmt(debt)}</Plain>} />
+        <ResultRow label="Cash flow" value={cashFlow} ok={cfOk}
+          msg={cfOk ? 'Money left over' : 'Operating at a loss'} />
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, sign, signColor, value, sublabel }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0' }}>
+      <div>
+        <div style={{ fontSize: 14, color: C.body }}>{label}</div>
+        {sublabel && <div style={{ fontSize: 10.5, color: C.faint, marginTop: 1 }}>{sublabel}</div>}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {sign && <span style={{ color: signColor, fontWeight: 600, fontSize: 14 }}>{sign}</span>}
+        {value}
+      </div>
+    </div>
+  );
+}
+function ResultRow({ label, value, ok, msg }) {
+  const color = ok ? C.ok : C.out;
+  return (
+    <div style={{
+      padding: '11px 0',
+      borderTop: `2px solid ${color}`,
+      transition: 'border-color .3s',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontFamily: 'Cardo, serif', fontWeight: 700, fontSize: 15, color, transition: 'color .3s' }}>{label}</span>
+        <span>
+          <span style={{ color: C.muted, marginRight: 4, fontWeight: 400 }}>=</span>
+          <span style={{
+            fontSize: 17, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color,
+            transition: 'color .3s',
+          }}>{fmt(value)}</span>
+        </span>
+      </div>
+      <div style={{ fontSize: 11, color, fontStyle: 'italic', marginTop: 2, transition: 'color .3s' }}>{msg}</div>
+    </div>
+  );
+}
+function Chip({ children, highlight }) {
+  return (
+    <span style={{
+      display: 'inline-flex', padding: '3px 10px', borderRadius: 6,
+      border: `1px solid ${highlight ? C.in : C.faint}`,
+      background: highlight ? '#fff' : '#fbfaf7',
+      fontSize: 15, fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+      boxShadow: highlight ? `0 0 0 3px ${C.inSoft}` : 'none',
+    }}>{children}</span>
+  );
+}
+function ChipInput({ value, onChange, highlight }) {
+  const [focused, setFocused] = React.useState(false);
+  const active = focused || highlight;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', padding: '3px 8px 3px 4px', borderRadius: 6,
+      border: `1px solid ${active ? C.in : C.faint}`,
+      background: active ? '#fff' : '#fbfaf7',
+      boxShadow: focused ? `0 0 0 3px ${C.inSoft}` : 'none',
+      transition: 'border-color .15s, box-shadow .15s, background .15s',
+    }}>
+      <span style={{ color: C.muted, marginRight: 1 }}>$</span>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value || 0))}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: 56, border: 'none', outline: 'none', background: 'transparent',
+          fontFamily: 'Inter, sans-serif', fontSize: 15, fontWeight: 600,
+          color: C.ink, fontVariantNumeric: 'tabular-nums', textAlign: 'right',
+          MozAppearance: 'textfield', padding: 0,
+        }}
+      />
+    </span>
+  );
+}
+function Plain({ children }) {
+  return <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{children}</span>;
+}
+
+// =========================================================================
+// Narrator banner — animates between three states + departure animation
+// =========================================================================
+function NarratorBanner({ state, stage, nextStage, onContinue }) {
+  // state: 'rest' | 'engaged' | 'ready'
+  const variants = {
+    rest: {
+      bg: '#fbfaf7', border: C.rule, color: C.muted, italic: true,
+      lead: '', msg: 'Try changing rent or operating costs. Watch NOI and cash flow respond.',
+      cta: null,
+    },
+    engaged: {
+      bg: C.amberSoft, border: C.amber, color: C.amber, italic: false,
+      lead: 'Nice.', msg: 'Keep playing, or move on whenever you\'re ready.',
+      cta: { label: `Continue →`, primary: false },
+    },
+    ready: {
+      bg: C.inSoft, border: C.in, color: C.in, italic: false,
+      lead: '', msg: `Next we'll add interest rate, DSCR, and equity returns.`,
+      cta: { label: 'Continue →', primary: true },
+    },
+  };
+  const v = variants[state];
+
+  return (
+    <div style={{
+      padding: '10px 12px',
+      background: v.bg, border: `1px solid ${v.border}`,
+      borderRadius: 8,
+      display: 'flex', alignItems: 'center', gap: 10,
+      transition: 'background .35s, border-color .35s',
+    }}>
+      <div style={{
+        flex: 1, fontSize: 12.5, color: v.color, lineHeight: 1.4,
+        fontStyle: v.italic ? 'italic' : 'normal',
+        transition: 'color .35s',
+      }}>
+        {v.lead && <strong style={{ marginRight: 4 }}>{v.lead}</strong>}
+        {v.msg}
+      </div>
+      {v.cta && (
+        <button
+          onClick={onContinue}
+          style={{
+            background: v.cta.primary ? C.in : '#fff',
+            border: `1px solid ${C.in}`,
+            color: v.cta.primary ? '#fff' : C.in,
+            fontFamily: 'Inter, sans-serif', fontSize: 11.5, fontWeight: 600,
+            padding: '6px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap',
+            transition: 'background .2s, color .2s, transform .15s',
+            animation: v.cta.primary ? 'pulse 1.6s ease-in-out infinite' : 'none',
+          }}
+        >{v.cta.label}</button>
+      )}
+    </div>
+  );
+}
+
+// =========================================================================
+// Stage 2 stub — appears after transition to show new content sliding in
+// =========================================================================
+function Stage2Card() {
+  const totalCost = 300000, equity = 60000;
+  const loanNeeded = totalCost - equity;
+  const rent = 2800, opCosts = 750;
+  const debt = pmt(0.065 / 12, 35 * 12, loanNeeded);
+  const noi = rent - opCosts;
+  const cashFlow = noi - debt;
+  const noiNeeds = debt * 1.2;
+  const noiOk = noi >= noiNeeds;
+  const cfOk = cashFlow > 0;
+
+  return (
+    <div>
+      <h1 style={{ fontFamily: 'Cardo, serif', fontSize: 22, fontWeight: 700, marginBottom: 14 }}>
+        🏢 Let's build an apartment!
+      </h1>
+      {/* Development — collapsed, full opacity */}
+      <div style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 6, padding: '10px 16px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontFamily: 'Cardo, serif', fontSize: 14, fontWeight: 700 }}>🏗️ Development</div>
+        <div style={{ display: 'flex', gap: 10, fontSize: 11.5, color: C.muted, alignItems: 'center' }}>
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(totalCost)} · 20% eq</span>
+          <span style={{ fontSize: 14, color: C.faint }}>▾</span>
+        </div>
+      </div>
+      {/* Finance — new card */}
+      <div style={{ background: '#fff', border: `2px solid ${C.in}`, borderRadius: 6, padding: '14px 16px', marginBottom: 12, boxShadow: `0 0 0 4px ${C.inSoft}` }}>
+        <div style={{ fontFamily: 'Cardo, serif', fontSize: 15, fontWeight: 700, marginBottom: 8, color: C.in }}>📈 Finance</div>
+        <Row label="Interest rate" value={<Chip highlight>6.5%</Chip>} />
+        <Row label="DSCR target"   value={<Chip highlight>1.2×</Chip>} />
+        <Row label="Required equity return" value={<Chip highlight>8.0%</Chip>} />
+      </div>
+      {/* Income & Expenses carried forward */}
+      <div style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 6, padding: '14px 16px' }}>
+        <Row label="Rent" sign="+" signColor={C.in} value={<Chip>{fmt(rent)}</Chip>} />
+        <Row label="Operating costs" sign="−" signColor={C.out} value={<Chip>{fmt(opCosts)}</Chip>} />
+        <ResultRow label="NOI" value={noi} ok={noiOk}
+          msg={noiOk ? 'Covers 1.2× debt service' : `Short of ${fmt(noiNeeds)} needed`} />
+        <Row label="Debt service" sign="−" signColor={C.out} sublabel="6.5% / 35 yr" value={<Plain>{fmt(debt)}</Plain>} />
+        <ResultRow label="Cash flow" value={cashFlow} ok={cfOk}
+          msg={cfOk ? 'Money left over' : 'Operating at a loss'} />
+      </div>
+    </div>
+  );
+}
+
+// =========================================================================
+// Main flow with state machine + scrubber
+// =========================================================================
+const TIMELINE = [
+  { t: 0,    label: 'Land on Stage 1',            phase: 'rest',       stage: 0, scroll: 0 },
+  { t: 2.5,  label: 'User edits Rent',             phase: 'rest',       stage: 0, scroll: 0.6 },
+  { t: 5.0,  label: 'After a beat → ready',       phase: 'ready',      stage: 0, scroll: 1.0 },
+  { t: 7.0,  label: 'Tap Continue → transition',  phase: 'transition', stage: 0, scroll: 1.0 },
+  { t: 8.6,  label: 'Land on Stage 2',            phase: 'rest',       stage: 1, scroll: 0 },
+];
+
+function App() {
+  const [t, setT] = React.useState(0);
+  const [playing, setPlaying] = React.useState(true);
+  const [rent, setRent] = React.useState(2500);
+  const [opCosts, setOpCosts] = React.useState(750);
+  const phoneRef = React.useRef(null);
+
+  // Auto-tick
+  React.useEffect(() => {
+    if (!playing) return;
+    const start = performance.now();
+    const tStart = t;
+    let raf;
+    const tick = (now) => {
+      const elapsed = (now - start) / 1000;
+      let nt = tStart + elapsed;
+      const end = TIMELINE[TIMELINE.length - 1].t + 1.5;
+      if (nt > end) {
+        // Loop
+        nt = 0;
+      }
+      setT(nt);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [playing]);
+
+  // Reflect timeline into rent value (animate from 2500 to 2800 between 2 and 3.5s)
+  const animatedRent = React.useMemo(() => {
+    if (t < 2) return 2500;
+    if (t > 3.5) return 2800;
+    const k = (t - 2) / 1.5;
+    return Math.round(2500 + (2800 - 2500) * k);
+  }, [t]);
+
+  // Resolve current phase
+  const phase = (() => {
+    let p = TIMELINE[0];
+    for (const s of TIMELINE) if (t >= s.t) p = s;
+    return p;
+  })();
+
+  // Transition progress (0..1) between t=7 and t=8.6
+  const transProgress = (() => {
+    if (t < 7) return 0;
+    if (t > 8.6) return 1;
+    return (t - 7) / 1.6;
+  })();
+
+  // Stage index visible (with overlapping crossfade so there's no blank frame)
+  // Stage 1 fades out over 0 → 0.6; Stage 2 fades in over 0.4 → 1.
+  const stageIndex = transProgress < 0.5 ? 0 : 1;
+  const outOpacity = transProgress < 0.6 ? Math.max(0, 1 - transProgress / 0.6) : 0;
+  const outTranslate = transProgress * -40;
+  const inOpacity = transProgress > 0.4 ? Math.min(1, (transProgress - 0.4) / 0.6) : 0;
+  const inTranslate = Math.max(0, (1 - (transProgress - 0.4) / 0.6)) * 40;
+
+  // Strip stage flips slightly past the visual midpoint to coincide with the
+  // moment Stage 2 dominates the screen — feels less abrupt than 0.5.
+  const stripStageIndex = transProgress > 0.6 ? 1 : 0;
+
+  const bannerState = phase.phase === 'transition' ? 'ready' : phase.phase;
+
+  return (
+    <div style={{ width: '100%', maxWidth: 420 }}>
+      <div style={{ textAlign: 'center', marginBottom: 18 }}>
+        <div style={{ fontFamily: 'Cardo, serif', fontSize: 22, fontWeight: 700, color: C.ink }}>
+          Stage transition — PR4
+        </div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+          Banner anchors to the bottom. Watch it shift tone as the user engages.
+        </div>
+      </div>
+
+      {/* Phone frame */}
+      <div style={{
+        position: 'relative',
+        width: 360, height: 720, margin: '0 auto',
+        background: C.page,
+        border: `10px solid #1a1714`, borderRadius: 38,
+        boxShadow: '0 20px 60px rgba(0,0,0,.25)',
+        overflow: 'hidden',
+      }}>
+        {/* Notch */}
+        <div style={{
+          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+          width: 110, height: 22, background: '#1a1714',
+          borderRadius: '0 0 14px 14px', zIndex: 10,
+        }} />
+
+        {/* Chapter strip — fixed at top */}
+        <div style={{
+          position: 'absolute', top: 30, left: 14, right: 14, zIndex: 5,
+        }}>
+          <ChapterStrip stageIndex={stripStageIndex} />
+        </div>
+
+        {/* Scrollable model area — fades between stage 1 and 2 */}
+        <div ref={phoneRef} style={{
+          position: 'absolute', top: 76, left: 0, right: 0, bottom: 14,
+          overflow: 'hidden', padding: '6px 14px 14px',
+        }}>
+          {/* Stage 1 — content + banner stacked */}
+          <div style={{
+            opacity: outOpacity,
+            transform: `translateY(${outTranslate}px)`,
+            transition: 'opacity .1s linear',
+            position: transProgress > 0.4 ? 'absolute' : 'relative',
+            left: 14, right: 14, top: 6,
+            pointerEvents: stageIndex === 0 ? 'auto' : 'none',
+          }}>
+            <Stage1Card
+              rent={animatedRent} opCosts={opCosts}
+              onRent={setRent} onOpCosts={setOpCosts}
+            />
+            <div style={{ marginTop: 14, marginBottom: 14 }}>
+              <NarratorBanner
+                state={bannerState}
+                stage={STAGES[0].short}
+                nextStage={STAGES[1].short}
+                onContinue={() => setT(7)}
+              />
+            </div>
+          </div>
+          {/* Stage 2 */}
+          {transProgress > 0.35 && (
+            <div style={{
+              opacity: inOpacity,
+              transform: `translateY(${inTranslate}px)`,
+              position: 'absolute', left: 14, right: 14, top: 6,
+            }}>
+              <Stage2Card />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Scrubber + caption */}
+      <div style={{ maxWidth: 420, margin: '20px auto 0' }}>
+        <div style={{
+          fontSize: 13, color: C.body, textAlign: 'center', marginBottom: 8,
+          minHeight: 20,
+        }}>
+          <strong style={{ fontFamily: 'Cardo, serif', marginRight: 6 }}>{t.toFixed(1)}s</strong>
+          {phase.label}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => setPlaying((p) => !p)} style={{
+            border: `1px solid ${C.rule}`, background: '#fff',
+            width: 36, height: 28, borderRadius: 6, cursor: 'pointer',
+            fontSize: 14, padding: 0,
+          }}>{playing ? '❚❚' : '▶'}</button>
+          <input
+            type="range" min="0" max={TIMELINE[TIMELINE.length-1].t + 1.5} step="0.05"
+            value={t} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }}
+            style={{ flex: 1 }}
+          />
+          <button onClick={() => { setT(0); setPlaying(true); }} style={{
+            border: `1px solid ${C.rule}`, background: '#fff',
+            padding: '0 10px', height: 28, borderRadius: 6, cursor: 'pointer',
+            fontSize: 11, fontWeight: 600, color: C.body,
+          }}>Restart</button>
+        </div>
+        {/* Timeline markers */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 9.5, color: C.faint }}>
+          {TIMELINE.map((m, i) => (
+            <button key={i} onClick={() => { setPlaying(false); setT(m.t); }} style={{
+              background: 'transparent', border: 'none', padding: '2px 4px', cursor: 'pointer',
+              fontSize: 9.5, color: phase === m ? C.ink : C.faint,
+              fontWeight: phase === m ? 700 : 400,
+            }}>{m.t}s</button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const style = document.createElement('style');
+style.textContent = `
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(63, 107, 138, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(63, 107, 138, 0); }
+}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+`;
+document.head.appendChild(style);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

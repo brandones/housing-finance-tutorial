@@ -6,3 +6,33 @@ body {
   background: #f8f6f4;
   color: #333333;
 }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #b8b2ab;
+  background: #fbfaf7;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #2b2724;
+  text-align: right;
+  width: 120px;
+}
+.chip-sm { width: 80px; }
+.chip:hover { border-color: #8a847e; }
+.chip:focus {
+  outline: none;
+  border-color: #3f6b8a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px #dbe4ec;
+}
+.chip-highlight {
+  border-color: #3f6b8a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px #dbe4ec;
+}

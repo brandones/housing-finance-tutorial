@@ -1,17 +1,55 @@
 <script>
   import Model1 from './lib/Model1.svelte'
   import Model2 from './lib/Model2.svelte'
+  import Model3 from './lib/Model3.svelte'
+  import Model4 from './lib/Model4.svelte'
 
   let stage = $state(0);
+  let interactionCount = $state(0);
+  const INTERACTION_THRESHOLD = 3;
+  let hasInteracted = $derived(interactionCount >= INTERACTION_THRESHOLD);
 
   const stages = [
     { num: '01', label: 'Basics' },
     { num: '02', label: 'Finance' },
-    { num: '03', label: 'Risk' },
+    { num: '03', label: 'Development' },
+    { num: '04', label: 'Social Housing' },
   ];
+
+  const bannerText = [
+    {
+      rest: 'Try changing rent or operating costs. Watch NOI and cash flow respond.',
+      ready: "Next we'll add interest rate, DSCR, and equity returns.",
+    },
+    {
+      rest: 'Try adjusting the finance parameters or adding subsidy.',
+      ready: "Next we'll break down development costs in detail.",
+    },
+    {
+      rest: 'Try adjusting construction or land costs.',
+      ready: "Next we'll look at how social housing changes the equation.",
+    },
+    {
+      rest: "Now let's see how things are different for a public developer. Note the lower land costs, interest rate, and property taxes, as well as the higher wage level.",
+      ready: '',
+    },
+  ];
+
+  function handleInput() {
+    interactionCount++;
+  }
+
+  function advance() {
+    if (stage < stages.length - 1) {
+      stage++;
+      interactionCount = 0;
+    }
+  }
 </script>
 
 <main>
+  <h1>🔑 Let's build an apartment!</h1>
+
   <nav class="chapter-strip">
     {#each stages as s, i}
       <button
@@ -19,26 +57,44 @@
         class:current={stage === i}
         class:past={stage > i}
         class:future={stage < i}
-        onclick={() => { stage = i; }}
-        disabled={i > 1}
+        onclick={() => { stage = i; interactionCount = 0; }}
+        disabled={i > 3}
       >
         {#if stage === i}
           <span class="tile-num">{s.num}</span>
           <span class="tile-label">{s.label}</span>
-        {:else if stage > i}
-          <span class="tile-check">✓</span>
         {:else}
-          <span class="tile-future-num">{s.num}</span>
+          <span class="tile-other-num">{s.num}</span>
         {/if}
       </button>
     {/each}
   </nav>
 
-  {#if stage === 0}
-    <Model1 />
-  {:else if stage === 1}
-    <Model2 />
+  {#if bannerText[stage]}
+    {#if hasInteracted && stage < stages.length - 1}
+      <div class="banner banner-ready">
+        <p class="banner-message">{bannerText[stage].ready}</p>
+        <button class="banner-cta" onclick={advance}>Continue →</button>
+      </div>
+    {:else if bannerText[stage].rest}
+      <div class="banner banner-rest">
+        <p class="banner-message">{bannerText[stage].rest}</p>
+      </div>
+    {/if}
   {/if}
+
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div oninput={handleInput}>
+    {#if stage === 0}
+      <Model1 />
+    {:else if stage === 1}
+      <Model2 />
+    {:else if stage === 2}
+      <Model3 />
+    {:else if stage === 3}
+      <Model4 />
+    {/if}
+  </div>
 </main>
 
 <style>
@@ -46,6 +102,14 @@
     max-width: 480px;
     margin: 0 auto;
     padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Cardo', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #2b2724;
+    margin: 0 0 12px;
   }
 
   .chapter-strip {
@@ -60,7 +124,10 @@
     cursor: pointer;
     font-family: 'Inter', sans-serif;
     transition: flex 0.42s cubic-bezier(.5, 0, .2, 1),
-                padding 0.42s cubic-bezier(.5, 0, .2, 1);
+                padding 0.42s cubic-bezier(.5, 0, .2, 1),
+                background 0.35s ease,
+                border-color 0.35s ease,
+                color 0.35s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -78,20 +145,16 @@
     align-items: flex-start;
   }
 
-  .tile.past {
-    flex: 1;
-    background: #dde7d2;
-    border-color: #dde7d2;
-    color: #4a7a3a;
-    padding: 7px 0;
-  }
-
-  .tile.future {
+  .tile.past, .tile.future {
     flex: 1;
     background: #ffffff;
     border-color: #e6e2dc;
     color: #b8b2ab;
     padding: 7px 0;
+  }
+
+  .tile.past {
+    cursor: pointer;
   }
 
   .tile:disabled {
@@ -112,13 +175,55 @@
     font-weight: 700;
   }
 
-  .tile-check {
+  .tile-other-num {
     font-size: 9.5px;
     font-weight: 700;
   }
 
-  .tile-future-num {
-    font-size: 9.5px;
-    font-weight: 700;
+  .banner {
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    min-height: 48px;
+  }
+
+  .banner-rest {
+    border-color: #e6e2dc;
+    background: #fbfaf7;
+    color: #4a4642;
+  }
+
+  .banner-ready {
+    border-color: #3f6b8a;
+    background: #dbe4ec;
+    color: #3f6b8a;
+  }
+
+  .banner-message {
+    flex: 1;
+    font-size: 12.5px;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .banner-cta {
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: 1px solid #3f6b8a;
+    background: #3f6b8a;
+    color: #ffffff;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .banner-cta:hover {
+    opacity: 0.9;
   }
 </style>

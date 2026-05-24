@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Inflow / outflow / net — brainstorm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { background: #f0eee9; font-family: Inter, sans-serif; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="variations.jsx"></script>
+<script type="text/babel" src="input-affordances.jsx"></script>
+<script type="text/babel">
+  const { DesignCanvas, DCSection, DCArtboard } = window;
+
+  function App() {
+    const W = 360, H = 720;
+    const HI = 760;
+    return (
+      <DesignCanvas>
+        <DCSection
+          id="inputs"
+          title="Input affordances"
+          subtitle="Five ways to signal ‘this number is editable’ on the signed-math layout. Computed rows stay plain bold; only inputs get chrome."
+        >
+          <DCArtboard id="ib" label="IB · Dotted underline" width={W} height={HI}><VariationIB /></DCArtboard>
+          <DCArtboard id="ia" label="IA · Hairline chip"    width={W} height={HI}><VariationIA /></DCArtboard>
+          <DCArtboard id="ic" label="IC · Stepper"          width={W} height={HI}><VariationIC /></DCArtboard>
+          <DCArtboard id="id" label="ID · Slider"           width={W} height={HI}><VariationID /></DCArtboard>
+          <DCArtboard id="ie" label="IE · Numpad sheet"     width={W} height={HI}><VariationIE /></DCArtboard>
+        </DCSection>
+        <DCSection
+          id="brainstorm"
+          title="Visualizing inflow, outflow & net"
+          subtitle="Six metaphors for showing rent → NOI → cash flow on a phone."
+        >
+          <DCArtboard id="a" label="A · Signed math"   width={W} height={H}><VariationA /></DCArtboard>
+          <DCArtboard id="b" label="B · Role pills"    width={W} height={H}><VariationB /></DCArtboard>
+          <DCArtboard id="c" label="C · Waterfall"     width={W} height={H}><VariationC /></DCArtboard>
+          <DCArtboard id="f" label="F · Carve-out bar" width={W} height={H}><VariationF /></DCArtboard>
+          <DCArtboard id="e" label="E · Sankey flow"   width={W} height={H}><VariationE /></DCArtboard>
+          <DCArtboard id="d" label="D · Bucket cascade" width={W} height={H}><VariationD /></DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

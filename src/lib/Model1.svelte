@@ -1,4 +1,7 @@
 <script>
+  import InfoTip from './InfoTip.svelte';
+  import MoneyInput from './MoneyInput.svelte';
+
   let totalCost = $state(300000);
   let equity = $state(60000);
   let rent = $state(2500);
@@ -28,24 +31,22 @@
   let cfSufficient = $derived(cashFlow > 0);
 </script>
 
-<h1>🏢 Let's build an apartment!</h1>
-
 <div class="card">
   <div class="card-title">🏗️ Development</div>
 
   <div class="row">
-    <div class="label">Total development cost</div>
+    <div class="label">Total development cost <InfoTip><p>Includes land costs, construction, and soft costs (fees, legal services, etc).</p></InfoTip><InfoTip icon="data"><p>In Kingston, ~$260 per square foot of living space is the absolute low end. $300/sqft is a typical low end for private development. Most local affordable housing projects are more like $400–$500/sqft.</p></InfoTip></div>
     <div class="right">
-      <input type="number" class="chip" bind:value={totalCost} min="0" step="10000">
+      <MoneyInput bind:value={totalCost} step={10000} />
     </div>
   </div>
   <div class="row">
     <div class="label">
-      Equity
+      Equity <InfoTip><p>How much cash do you have available? This is like the down payment on a house.</p><p>You can also get equity from others, but they will expect returns and have a stake in your project.</p></InfoTip>
       <div class="sublabel">{equityPct}% of total</div>
     </div>
     <div class="right">
-      <input type="number" class="chip" bind:value={equity} min="0" step="5000">
+      <MoneyInput bind:value={equity} step={5000} />
     </div>
   </div>
   <div class="row">
@@ -60,22 +61,22 @@
   <div class="card-title">💰 Income & expenses</div>
 
   <div class="row">
-    <div class="label">Rent</div>
+    <div class="label">Rent <InfoTip icon="data"><p>Check reference rents on <a href="https://www.rentometer.com/" target="_blank" rel="noopener">Rentometer</a>.</p><p>75th percentile apartment rents in Kingston: $1,800/1BR, $2,200/2BR, $2,400/3BR. If you try to charge much more than that, you may lose money to vacancies.</p></InfoTip></div>
     <div class="right">
       <span class="sign sign-in">+</span>
-      <input type="number" class="chip" bind:value={rent} min="0" step="50">
+      <MoneyInput bind:value={rent} step={50} />
     </div>
   </div>
   <div class="row">
-    <div class="label">Operating costs</div>
+    <div class="label">Operating costs <InfoTip><p>Includes utilities, taxes, insurance, and maintenance.</p></InfoTip><InfoTip icon="data"><p>$750/month is pretty typical for Kingston.</p><p><a href="https://www.prea.org/publications/quarterly/multifamily-property-expenses-rising-rapidly-led-by-insurance/" target="_blank" rel="noopener">PREA</a> is a good source for national comparisons.</p></InfoTip></div>
     <div class="right">
       <span class="sign sign-out">−</span>
-      <input type="number" class="chip" bind:value={opCosts} min="0" step="50">
+      <MoneyInput bind:value={opCosts} step={50} />
     </div>
   </div>
 
   <div class="result-row" class:result-ok={noiSufficient} class:result-warn={!noiSufficient}>
-    <span class="result-label">NOI</span>
+    <span class="result-label">NOI <InfoTip><p>Net Operating Income or NOI is revenue (just rent in this case) minus operating costs.</p></InfoTip></span>
     <span class="result-value">
       <span class="sign sign-eq">=</span>{fmt(noi)}
     </span>
@@ -88,7 +89,7 @@
 
   <div class="row">
     <div class="label">
-      Debt service
+      Debt service <InfoTip><p>The payments made on the loan.</p></InfoTip>
       <div class="sublabel">6.5% / 35 yr</div>
     </div>
     <div class="right">
@@ -98,7 +99,7 @@
   </div>
 
   <div class="result-row" class:result-ok={cfSufficient} class:result-warn={!cfSufficient}>
-    <span class="result-label">Cash flow</span>
+    <span class="result-label">Cash flow <InfoTip><p>For a for-profit developer, this is profit. For a nonprofit or public developer, cash flow provides funding that can be used to help build or subsidize other projects.</p></InfoTip></span>
     <span class="result-value">
       <span class="sign sign-eq">=</span>{fmt(cashFlow)}
     </span>
@@ -106,14 +107,6 @@
 </div>
 
 <style>
-  h1 {
-    font-family: 'Cardo', serif;
-    font-size: 24px;
-    font-weight: 700;
-    color: #2b2724;
-    margin-bottom: 16px;
-  }
-
   .card {
     background: #ffffff;
     border: 1px solid #e6e2dc;
@@ -163,32 +156,6 @@
   .sign-in { color: #3f6b8a; }
   .sign-out { color: #b87351; }
   .sign-eq { color: #8a847e; font-weight: 400; margin-right: 4px; }
-
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid #b8b2ab;
-    background: #fbfaf7;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: #2b2724;
-    text-align: right;
-    width: 120px;
-  }
-  .chip:hover {
-    border-color: #8a847e;
-  }
-  .chip:focus {
-    outline: none;
-    border-color: #3f6b8a;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px #dbe4ec;
-  }
 
   .computed {
     font-size: 15px;
