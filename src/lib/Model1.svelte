@@ -100,7 +100,7 @@
   </div>
 
   <div class="result-row" class:result-ok={noiSufficient} class:result-warn={!noiSufficient}>
-    <span class="result-label">NOI <InfoTip><p>Net Operating Income or NOI is revenue (just rent in this case) minus operating costs.</p></InfoTip></span>
+    <span class="result-label">Net Operating Income <InfoTip><p>Net Operating Income is revenue (just rent in this case) minus operating costs.</p></InfoTip></span>
     <span class="result-value">
       <span class="sign sign-eq">=</span>{fmt(noi)}
     </span>

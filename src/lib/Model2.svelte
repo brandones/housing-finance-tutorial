@@ -182,7 +182,7 @@
   </div>
 
   <div class="result-row" class:result-ok={noiSufficient} class:result-warn={!noiSufficient}>
-    <span class="result-label">NOI</span>
+    <span class="result-label">Net Operating Income</span>
     <span class="result-value">
       <span class="sign sign-eq">=</span>{fmt(noi)}
     </span>
