@@ -237,7 +237,7 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 14px;
-    min-height: 48px;
+    min-height: 54px;
   }
 
   .banner-rest {
