@@ -7,8 +7,8 @@ deployed as one Netlify site with each app served from its own subpath.
 
 ```
 apps/
-  kingston-housing-tutorial/   Svelte + Vite tutorial, served at
-                               /kingston-housing-tutorial/
+  build-apartment-kingston/   Svelte + Vite tutorial, served at
+                               /build-apartment-kingston/
 build.sh                       Builds every apps/*/ and assembles a
                                combined dist/ with a landing page.
 netlify.toml                   Tells Netlify to run npm run build and
