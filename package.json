@@ -1,0 +1,7 @@
+{
+  "name": "housing-finance-tutorial",
+  "private": true,
+  "scripts": {
+    "build": "bash build.sh"
+  }
+}

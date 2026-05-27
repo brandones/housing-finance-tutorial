@@ -1,25 +1,32 @@
 # housing-finance-tutorial
 
-A monorepo of standalone web apps teaching housing finance concepts.
+A monorepo of standalone web apps teaching housing finance concepts,
+deployed as one Netlify site with each app served from its own subpath.
 
 ## Layout
 
 ```
 apps/
-  kingston-housing-tutorial/   Svelte + Vite app: Kingston-specific
-                               tutorial walking through private and
-                               public housing finance in four chapters.
+  kingston-housing-tutorial/   Svelte + Vite tutorial, served at
+                               /kingston-housing-tutorial/
+build.sh                       Builds every apps/*/ and assembles a
+                               combined dist/ with a landing page.
+netlify.toml                   Tells Netlify to run npm run build and
+                               publish dist/.
 ```
 
-Each app lives in its own directory under `apps/`, with its own
-`package.json`, build, and `netlify.toml`. To deploy an app to Netlify,
-create a new Netlify site and set the **base directory** to the app's
-folder (e.g., `apps/kingston-housing-tutorial`). Netlify will read the
-app's `netlify.toml` from there.
+A request to `/` hits a small landing page listing each app.
+A request to `/<app-name>/` hits that app.
+
+## Local build
+
+```sh
+npm run build
+npx serve dist
+```
 
 ## Adding another app
 
-1. Create `apps/<new-app-name>/` with its own `package.json`, source,
-   and `netlify.toml`.
-2. On Netlify, create a new site pointing at this repo and set the
-   base directory to `apps/<new-app-name>`.
+1. Create `apps/<new-app>/` with its own `package.json`, source, and
+   `vite.config.js` (set `base: '/<new-app>/'` in production).
+2. Re-run `npm run build`. The landing page lists it automatically.

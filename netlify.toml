@@ -1,0 +1,7 @@
+# Netlify build config for the combined site.
+# This runs build.sh, which builds each app under apps/* into a top-level
+# dist/<app-name>/ and emits a small landing page at dist/index.html.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
