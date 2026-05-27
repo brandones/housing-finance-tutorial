@@ -122,7 +122,7 @@
   </div>
 
   <footer>
-    <span class="credit">Brandon Istenes / Rent & Rentier 2026</span>
+    <span class="credit">Brandon Istenes / <a href="https://rentrentier.com/" target="_blank" rel="noopener">Rent &amp; Rentier</a> 2026</span>
   </footer>
 </main>
 
@@ -270,5 +270,13 @@
     font-family: 'Inter', sans-serif;
     font-size: 11px;
     color: #8a847e;
+  }
+
+  .credit a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .credit a:hover {
+    text-decoration: underline;
   }
 </style>
