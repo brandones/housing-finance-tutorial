@@ -4,18 +4,23 @@
   let hovered = $state(false);
   let seen = $state(false);
   let el;
+  let popoverEl;
 
   let show = $derived(open || hovered);
   let glow = $derived(!seen);
 
-  function toggle(e) {
-    e.stopPropagation();
+  function toggle() {
     open = !open;
     seen = true;
   }
-  function handleMouseEnter() {
+  function handlePointerEnter(e) {
+    if (e.pointerType !== 'mouse') return;
     hovered = true;
     seen = true;
+  }
+  function handlePointerLeave(e) {
+    if (e.pointerType !== 'mouse') return;
+    hovered = false;
   }
 
   function handleClickOutside(e) {
@@ -23,6 +28,21 @@
       open = false;
     }
   }
+
+  // Keep popover within viewport
+  $effect(() => {
+    if (!show || !popoverEl) return;
+    requestAnimationFrame(() => {
+      if (!popoverEl) return;
+      const rect = popoverEl.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const margin = 8;
+      let shift = 0;
+      if (rect.left < margin) shift = margin - rect.left;
+      else if (rect.right > vw - margin) shift = (vw - margin) - rect.right;
+      popoverEl.style.setProperty('--shift', `${shift}px`);
+    });
+  });
 </script>
 
 <svelte:document onclick={handleClickOutside} />
@@ -30,8 +50,8 @@
 <span
   class="info-tip"
   bind:this={el}
-  onmouseenter={handleMouseEnter}
-  onmouseleave={() => hovered = false}
+  onpointerenter={handlePointerEnter}
+  onpointerleave={handlePointerLeave}
 >
   <button class="info-icon" class:glow onclick={toggle} aria-label={icon === 'data' ? 'Local data' : 'More info'}>
     {#if icon === 'data'}
@@ -45,7 +65,7 @@
     {/if}
   </button>
   {#if show}
-    <div class="popover">
+    <div class="popover" bind:this={popoverEl}>
       {@render children()}
     </div>
   {/if}
@@ -93,7 +113,7 @@
     position: absolute;
     bottom: calc(100% + 6px);
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(calc(-50% + var(--shift, 0px)));
     background: #2b2724;
     color: #f0eee9;
     font-family: 'Inter', sans-serif;
@@ -103,7 +123,7 @@
     padding: 8px 10px;
     border-radius: 6px;
     width: max-content;
-    max-width: 240px;
+    max-width: min(240px, calc(100vw - 16px));
     z-index: 10;
     pointer-events: auto;
   }
@@ -130,7 +150,7 @@
     content: '';
     position: absolute;
     top: 100%;
-    left: 50%;
+    left: calc(50% - var(--shift, 0px));
     transform: translateX(-50%);
     border: 5px solid transparent;
     border-top-color: #2b2724;
