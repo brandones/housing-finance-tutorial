@@ -21,6 +21,16 @@
     return '$' + Math.round(n).toLocaleString();
   }
 
+  let tdcTier = $derived(
+    totalCost < 300000
+      ? { name: 'Floor', desc: 'Stick-built garden apartments, 2–3 stories, no elevator, vinyl siding, cheapo finishes.' }
+      : totalCost < 400000
+      ? { name: 'Typical new construction', desc: 'Up to 5 story wood frame, elevator, all-electric, basic finishes.' }
+      : totalCost < 550000
+      ? { name: 'Green / nicer', desc: 'Passive House, triple-pane windows, upgraded HVAC, real hardwood, better cabinetry.' }
+      : { name: 'Luxury', desc: 'Parking structure, premium millwork and stone, high-end appliances, oak floors, amenities. Steel or concrete for taller buildings.' }
+  );
+
   let equityPct = $derived((equity / totalCost * 100).toFixed(0));
   let loanNeeded = $derived(totalCost - equity);
   let debtService = $derived(pmt(interestRate / 12, loanTerm * 12, loanNeeded));
@@ -35,11 +45,25 @@
   <div class="card-title">🏗️ Development</div>
 
   <div class="row">
-    <div class="label">Total development cost <InfoTip><p>Includes land costs, construction, and soft costs (fees, legal services, etc).</p></InfoTip><InfoTip icon="data"><p>In Kingston, ~$260 per square foot of living space is the absolute low end. $300/sqft is a typical low end for private development. Most local affordable housing projects are more like $400–$500/sqft.</p></InfoTip></div>
+    <div class="label">Total development cost <InfoTip><p>Includes land costs, construction, and soft costs (fees, legal services, etc).</p></InfoTip></div>
     <div class="right">
-      <MoneyInput bind:value={totalCost} step={10000} />
+      <span class="computed">{fmt(totalCost)}</span>
     </div>
   </div>
+  <div class="slider-row">
+    <input
+      type="range"
+      class="cost-slider"
+      bind:value={totalCost}
+      min="200000"
+      max="700000"
+      step="5000"
+    >
+  </div>
+  <p class="tier-desc">
+    <span class="tier-name">{tdcTier.name}.</span>
+    {tdcTier.desc}
+  </p>
   <div class="row">
     <div class="label">
       Equity <InfoTip><p>How much cash do you have available? This is like the down payment on a house.</p><p>You can also get equity from others, but they will expect returns and have a stake in your project.</p></InfoTip>
@@ -156,6 +180,55 @@
   .sign-in { color: #3f6b8a; }
   .sign-out { color: #b87351; }
   .sign-eq { color: #8a847e; font-weight: 400; margin-right: 4px; }
+
+  .slider-row {
+    padding: 2px 0 8px;
+    position: relative;
+  }
+
+  .cost-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e6e2dc;
+    border-radius: 3px;
+    outline: none;
+  }
+
+  .cost-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3f6b8a;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .cost-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3f6b8a;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .tier-desc {
+    font-size: 11.5px;
+    color: #8a847e;
+    line-height: 1.4;
+    margin: -2px 0 6px;
+  }
+
+  .tier-name {
+    color: #4a4642;
+    font-weight: 600;
+  }
 
   .computed {
     font-size: 15px;
