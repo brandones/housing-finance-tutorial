@@ -7,7 +7,7 @@
   let popoverEl;
 
   let show = $derived(open || hovered);
-  let glow = $derived(!seen);
+  let glow = $derived(icon === 'warn' || !seen);
 
   function toggle() {
     open = !open;
@@ -53,12 +53,24 @@
   onpointerenter={handlePointerEnter}
   onpointerleave={handlePointerLeave}
 >
-  <button class="info-icon" class:glow onclick={toggle} aria-label={icon === 'data' ? 'Local data' : 'More info'}>
+  <button
+    class="info-icon"
+    class:glow={glow && icon !== 'warn'}
+    class:glow-warn={glow && icon === 'warn'}
+    onclick={toggle}
+    aria-label={icon === 'data' ? 'Local data' : icon === 'warn' ? 'Warning' : 'More info'}
+  >
     {#if icon === 'data'}
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
         <rect x="1.5" y="10" width="2.5" height="4.5" rx="0.5" />
         <rect x="6.75" y="6" width="2.5" height="8.5" rx="0.5" />
         <rect x="12" y="1.5" width="2.5" height="13" rx="0.5" />
+      </svg>
+    {:else if icon === 'warn'}
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="13" />
+        <line x1="12" y1="16.5" x2="12" y2="17" />
       </svg>
     {:else}
       ⓘ
@@ -107,6 +119,19 @@
   @keyframes info-glow {
     0%, 100% { filter: drop-shadow(0 0 2px rgba(63, 107, 138, 0.5)); }
     50%      { filter: drop-shadow(0 0 6px rgba(63, 107, 138, 1)); }
+  }
+
+  .info-icon.glow-warn {
+    color: #b87351;
+    animation: warn-glow 1.8s ease-in-out infinite;
+  }
+  .info-icon.glow-warn:hover {
+    color: #a05f3e;
+  }
+
+  @keyframes warn-glow {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(184, 115, 81, 0.5)); }
+    50%      { filter: drop-shadow(0 0 6px rgba(184, 115, 81, 1)); }
   }
 
   .popover {

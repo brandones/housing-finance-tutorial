@@ -5,9 +5,10 @@
   import Model4 from './lib/Model4.svelte'
 
   let stage = $state(0);
-  let interactionCount = $state(0);
-  const INTERACTION_THRESHOLD = 3;
-  let hasInteracted = $derived(interactionCount >= INTERACTION_THRESHOLD);
+  let touchedCount = $state(0);
+  let touchedInputs = new Set();
+  const INTERACTION_THRESHOLD = 2;
+  let hasInteracted = $derived(touchedCount >= INTERACTION_THRESHOLD);
 
   const stages = [
     { num: '01', label: 'Basics' },
@@ -19,7 +20,7 @@
   const bannerText = [
     {
       rest: 'Try changing rent or operating costs. Watch NOI and cash flow respond.',
-      ready: "Next we'll add interest rate, DSCR, and equity returns.",
+      ready: "Next we'll mess with the financial variables.",
     },
     {
       rest: 'Try adjusting the finance parameters or adding subsidy.',
@@ -35,16 +36,25 @@
     },
   ];
 
-  function handleInput() {
-    interactionCount++;
+  function handleInput(e) {
+    if (e.target && !touchedInputs.has(e.target)) {
+      touchedInputs.add(e.target);
+      touchedCount = touchedInputs.size;
+    }
+  }
+
+  function resetInteractions() {
+    touchedInputs.clear();
+    touchedCount = 0;
   }
 
   function advance() {
     if (stage < stages.length - 1) {
       stage++;
-      interactionCount = 0;
+      resetInteractions();
     }
   }
+
 </script>
 
 <main>
@@ -64,7 +74,7 @@
         class:current={stage === i}
         class:past={stage > i}
         class:future={stage < i}
-        onclick={() => { stage = i; interactionCount = 0; }}
+        onclick={() => { stage = i; resetInteractions(); }}
         disabled={i > 3}
       >
         {#if stage === i}
@@ -102,6 +112,10 @@
       <Model4 />
     {/if}
   </div>
+
+  <footer>
+    <span class="credit">Brandon Istenes / Rent & Rentier 2026</span>
+  </footer>
 </main>
 
 <style>
@@ -246,5 +260,13 @@
 
   .banner-cta:hover {
     opacity: 0.9;
+  }
+
+  footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: #8a847e;
   }
 </style>
