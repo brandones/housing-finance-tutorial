@@ -56,7 +56,7 @@
   let wageLevel = $state(stored.wageLevel);
 
   let projectOpen = $state(true);
-  let financeOpen = $state(true);
+  let financeOpen = $state(false);
   let incomeOpen = $state(true);
   let devOpen = $state(true);
 
