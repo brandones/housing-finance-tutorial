@@ -30,3 +30,10 @@ npx serve dist
 1. Create `apps/<new-app>/` with its own `package.json`, source, and
    `vite.config.js` (set `base: '/<new-app>/'` in production).
 2. Re-run `npm run build`. The landing page lists it automatically.
+
+## License
+
+Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+When sharing or adapting, credit:
+**Brandon Istenes / [Rent & Rentier](https://rentrentier.com/)** —
+see [`LICENSE`](./LICENSE) for the required attribution format.
