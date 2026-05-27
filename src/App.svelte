@@ -4,8 +4,22 @@
   import Model3 from './lib/Model3.svelte'
   import Model4 from './lib/Model4.svelte'
 
-  let stage = $state(0);
+  const STAGE_KEY = 'app-stage';
+  function loadStage() {
+    try {
+      const n = parseInt(localStorage.getItem(STAGE_KEY) ?? '0', 10);
+      return Number.isFinite(n) && n >= 0 && n < 4 ? n : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  let stage = $state(loadStage());
   let touchedCount = $state(0);
+
+  $effect(() => {
+    try { localStorage.setItem(STAGE_KEY, String(stage)); } catch {}
+  });
   let touchedInputs = new Set();
   const INTERACTION_THRESHOLD = 2;
   let hasInteracted = $derived(touchedCount >= INTERACTION_THRESHOLD);
@@ -19,19 +33,19 @@
 
   const bannerText = [
     {
-      rest: 'Try changing rent or operating costs. Watch NOI and cash flow respond.',
+      rest: 'Try changing rent and subsidy. Watch NOI and cash flow respond.',
       ready: "Next we'll mess with the financial variables.",
     },
     {
-      rest: 'Try adjusting the finance parameters or adding subsidy.',
+      rest: 'See how different loan terms and equity sources impact the deal.',
       ready: "Next we'll break down development costs in detail.",
     },
     {
-      rest: 'Try adjusting construction or land costs.',
+      rest: "Let's break down development costs in detail. Now we can look at the contribution of land costs, construction costs (hard costs), soft costs, and wage levels.",
       ready: "Next we'll look at how social housing changes the equation.",
     },
     {
-      rest: "Now let's see how things are different for a public developer. Note the lower land costs, interest rate, and property taxes, as well as the higher wage level.",
+      rest: "Here's how things are different for a public developer. Note the lower land costs, interest rate, and property taxes, as well as the higher wage level.",
       ready: '',
     },
   ];

@@ -28,6 +28,9 @@
   let rent = $state(stored.rent);
   let opCosts = $state(stored.opCosts);
 
+  let incomeOpen = $state(true);
+  let devOpen = $state(true);
+
   // Typical apartment sqft per bedroom count (internal)
   const SQFT_BY_BR = { 0: 500, 1: 700, 2: 900, 3: 1100, 4: 1300, 5: 1500 };
   let sqft = $derived(SQFT_BY_BR[Math.max(0, Math.min(5, bedrooms))] ?? 900);
@@ -128,8 +131,17 @@
 </div>
 
 <div class="card">
-  <div class="card-title">💵 Income</div>
+  <button class="card-title collapsible" class:collapsed={!incomeOpen} onclick={() => incomeOpen = !incomeOpen}>
+    <span>💵 Income</span>
+    <span class="collapse-summary">
+      {#if !incomeOpen}
+        <span class="summary-text">{fmt(rent)} rent · {fmt(noi)} NOI</span>
+      {/if}
+      <span class="chevron" class:chevron-closed={!incomeOpen}>▾</span>
+    </span>
+  </button>
 
+  {#if incomeOpen}
   <div class="row">
     <div class="label">
       Rent
@@ -191,17 +203,28 @@
 
   <div class="row">
     <div class="label">
-      How big a loan you can get<InfoTip><p>The maximum supportable loan is the largest loan whose monthly payments NOI can cover, given the debt coverage ratio.</p></InfoTip>
+      <span class="label-strong">Maximum Supportable Loan</span><InfoTip><p>The biggest loan you can get, based on your NOI. NOI needs to cover monthly payments plus some buffer. The size of the buffer is the Debt Coverage Ratio, or DCR.</p></InfoTip>
       <div class="sublabel">based on NOI × {dcr} DCR</div>
     </div>
     <div class="right">
       <span class="computed">{fmt(maxLoan)}</span>
     </div>
   </div>
+  {/if}
 </div>
 
 <div class="card">
-  <div class="card-title">🏗️ Development</div>
+  <button class="card-title collapsible" class:collapsed={!devOpen} onclick={() => devOpen = !devOpen}>
+    <span>🏗️ Development</span>
+    <span class="collapse-summary">
+      {#if !devOpen}
+        <span class="summary-text">{fmt(totalCost)} TDC · {fmt(loanNeeded)} loan</span>
+      {/if}
+      <span class="chevron" class:chevron-closed={!devOpen}>▾</span>
+    </span>
+  </button>
+
+  {#if devOpen}
 
   <div class="row">
     <div class="label">Cost per square foot <InfoTip><p>Includes land costs, construction, and soft costs (fees, legal services, etc).</p></InfoTip></div>
@@ -230,6 +253,7 @@
       <div class="sublabel">× {sqft.toLocaleString()} sqft</div>
     </div>
     <div class="right">
+      <span class="sign sign-in">+</span>
       <span class="computed">{fmt(totalCost)}</span>
     </div>
   </div>
@@ -239,19 +263,36 @@
       <div class="sublabel">{equityPct}% of total</div>
     </div>
     <div class="right">
+      <span class="sign sign-out">−</span>
       <MoneyInput bind:value={equity} step={5000} />
     </div>
   </div>
   <div class="row">
     <div class="label">Subsidy <InfoTip><p>Capital subsidy — federal, state, or local grants, low-interest gap financing, or capitalized tax breaks like PILOTs. Hard to get, very valuable stuff.</p></InfoTip></div>
     <div class="right">
+      <span class="sign sign-out">−</span>
       <MoneyInput bind:value={subsidy} step={5000} />
     </div>
   </div>
+
+  <div class="result-row">
+    <span class="result-label">Loan needed</span>
+    <span class="result-value">
+      <span class="sign sign-eq">=</span>{fmt(loanNeeded)}
+    </span>
+  </div>
+  {/if}
+</div>
+
+<div class="card">
+  <div class="card-title">🧮 Results</div>
+
   <div class="row">
     <div class="label">Loan needed</div>
     <div class="right">
       <span class="computed">{fmt(loanNeeded)}</span>
+      <span class="unit">out of available</span>
+      <span class="computed">{fmt(maxLoan)}</span>
     </div>
   </div>
 
@@ -266,10 +307,6 @@
   {:else}
     <p class="result-message warn">You need {fmt(gap)} more in equity or subsidy.</p>
   {/if}
-</div>
-
-<div class="card">
-  <div class="card-title">🧮 Results</div>
 
   <div class="row">
     <div class="label">
@@ -322,6 +359,49 @@
     border-bottom: 1px solid #e6e2dc;
   }
 
+  .card:has(.collapsed) {
+    padding: 10px 16px;
+  }
+
+  .collapsible {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #e6e2dc;
+    cursor: pointer;
+    padding: 0 0 8px;
+    margin-bottom: 12px;
+  }
+  .collapsible.collapsed {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .collapse-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .summary-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: #8a847e;
+    font-variant-numeric: tabular-nums;
+  }
+  .chevron {
+    font-size: 12px;
+    color: #b8b2ab;
+    transition: transform 0.2s ease;
+  }
+  .chevron-closed {
+    transform: rotate(-90deg);
+  }
+
   .row {
     display: flex;
     justify-content: space-between;
@@ -332,6 +412,11 @@
   .label {
     font-size: 14px;
     color: #4a4642;
+  }
+
+  .label-strong {
+    font-family: 'Cardo', serif;
+    font-weight: 700;
   }
 
   .sublabel {

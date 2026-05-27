@@ -2,20 +2,92 @@
   import InfoTip from './InfoTip.svelte';
   import MoneyInput from './MoneyInput.svelte';
 
-  let totalCost = $state(300000);
-  let equity = $state(60000);
-  let capitalSubsidy = $state(0);
-  let interestRate = $state(6.5);
-  let loanTerm = $state(35);
-  let rent = $state(2500);
-  let operatingSubsidy = $state(0);
-  let opCosts = $state(500);
-  let propertyTax = $state(250);
-  let dcr = $state(1.2);
-  let hurdleRate = $state(7.5);
+  const STORAGE_KEY = 'model2-inputs';
+  const DEFAULTS = {
+    bedrooms: 2,
+    costPerSqft: 300,
+    equity: 60000,
+    subsidy: 0,
+    rent: 2500,
+    opCosts: 750,
+    interestRate: 6.5,
+    loanTerm: 35,
+    dcr: 1.2,
+    hurdleRate: 8,
+  };
 
-  let devOpen = $state(true);
+  function loadStored() {
+    try {
+      const m1 = JSON.parse(localStorage.getItem('model1-inputs') || '{}');
+      const m2 = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      return { ...DEFAULTS, ...m1, ...m2 };
+    } catch {
+      return { ...DEFAULTS };
+    }
+  }
+  const stored = loadStored();
+
+  let bedrooms = $state(stored.bedrooms);
+  let costPerSqft = $state(stored.costPerSqft);
+  let equity = $state(stored.equity);
+  let subsidy = $state(stored.subsidy);
+  let rent = $state(stored.rent);
+  let opCosts = $state(stored.opCosts);
+  let interestRate = $state(stored.interestRate);
+  let loanTerm = $state(stored.loanTerm);
+  let dcr = $state(stored.dcr);
+  let hurdleRate = $state(stored.hurdleRate);
+
   let financeOpen = $state(true);
+  let incomeOpen = $state(true);
+  let devOpen = $state(true);
+
+  // Typical apartment sqft per bedroom count (internal)
+  const SQFT_BY_BR = { 0: 500, 1: 700, 2: 900, 3: 1100, 4: 1300, 5: 1500 };
+  let sqft = $derived(SQFT_BY_BR[Math.max(0, Math.min(5, bedrooms))] ?? 900);
+  let totalCost = $derived(costPerSqft * sqft);
+
+  $effect(() => {
+    try {
+      // Shared inputs live in model1-inputs so they carry across all models
+      localStorage.setItem('model1-inputs', JSON.stringify({
+        bedrooms, costPerSqft, equity, subsidy, rent, opCosts,
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        interestRate, loanTerm, dcr, hurdleRate,
+      }));
+    } catch {}
+  });
+
+  function resetAll() {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('model')) localStorage.removeItem(key);
+    }
+    location.reload();
+  }
+
+  // Rent benchmarks
+  const FOUR_PERSON_AMI = 117000;
+  const HH_FACTORS = { 1: 0.70, 2: 0.80, 3: 0.90, 4: 1.00, 5: 1.08, 6: 1.16, 7: 1.24, 8: 1.32, 9: 1.40 };
+  const AMI_LEVELS = [30, 50, 60, 80, 100, 120];
+  const MARKET_RENTS = {
+    0: [{ label: '25th', value: 1000 }, { label: 'median', value: 1500 }, { label: '75th', value: 1650 }],
+    1: [{ label: '25th', value: 1400 }, { label: 'median', value: 1600 }, { label: '75th', value: 1800 }],
+    2: [{ label: '25th', value: 1650 }, { label: 'median', value: 1900 }, { label: '75th', value: 2400 }],
+    3: [{ label: '25th', value: 1900 }, { label: 'median', value: 2400 }, { label: '75th', value: 2800 }],
+  };
+  const RENT_MIN = 500;
+  const RENT_MAX = 4000;
+
+  function amiRent(bedroomCount, pct) {
+    const people = Math.max(1, Math.min(9, bedroomCount + 1));
+    const factor = HH_FACTORS[people];
+    return Math.round((FOUR_PERSON_AMI * factor * pct / 100 * 0.30) / 12);
+  }
+
+  function rentPct(v) {
+    return Math.max(0, Math.min(100, ((v - RENT_MIN) / (RENT_MAX - RENT_MIN)) * 100));
+  }
 
   function pmt(rate, nper, pv) {
     if (rate === 0) return pv / nper;
@@ -23,85 +95,51 @@
     return (pv * rate * x) / (x - 1);
   }
 
+  function pv(rate, nper, pmtAmt) {
+    if (rate === 0) return pmtAmt * nper;
+    return pmtAmt * (1 - Math.pow(1 + rate, -nper)) / rate;
+  }
+
   function fmt(n) {
-    return '$' + Math.round(n).toLocaleString();
+    const sign = n < 0 ? '-' : '';
+    return sign + '$' + Math.abs(Math.round(n)).toLocaleString();
   }
 
   let tdcTier = $derived(
-    totalCost < 300000
+    costPerSqft < 280
       ? { name: 'Floor', desc: 'Stick-built garden apartments, 2–3 stories, no elevator, vinyl siding, cheapo finishes.' }
-      : totalCost < 400000
+      : costPerSqft < 400
       ? { name: 'Typical new construction', desc: 'Up to 5 story wood frame, elevator, all-electric, basic finishes.' }
-      : totalCost < 550000
+      : costPerSqft < 550
       ? { name: 'Green / nicer', desc: 'Passive House, triple-pane windows, upgraded HVAC, real hardwood, better cabinetry.' }
       : { name: 'Luxury', desc: 'Parking structure, premium millwork and stone, high-end appliances, oak floors, amenities. Steel or concrete for taller buildings.' }
   );
 
+  let noi = $derived(rent - opCosts);
+  let maxDebtService = $derived(noi / dcr);
+  let maxLoan = $derived(pv(interestRate / 100 / 12, loanTerm * 12, maxDebtService));
   let equityPct = $derived((equity / totalCost * 100).toFixed(0));
-  let loanNeeded = $derived(totalCost - equity - capitalSubsidy);
+  let loanNeeded = $derived(totalCost - equity - subsidy);
+  let gap = $derived(Math.max(0, loanNeeded - maxLoan));
+  let loanSupportable = $derived(gap <= 0);
   let debtService = $derived(pmt(interestRate / 100 / 12, loanTerm * 12, loanNeeded));
-  let noi = $derived(rent - opCosts - propertyTax + operatingSubsidy);
   let cashFlow = $derived(noi - debtService);
-  let requiredNoi = $derived(debtService * dcr);
-  let noiSufficient = $derived(noi >= requiredNoi);
   let requiredCashFlow = $derived(equity * (hurdleRate / 100) / 12);
+  let cocReturn = $derived(equity > 0 ? (cashFlow * 12 / equity * 100) : 0);
   let cfSufficient = $derived(cashFlow >= requiredCashFlow);
+
+  let marketTicks = $derived(MARKET_RENTS[Math.max(0, Math.min(3, bedrooms))]);
+  let amiTicks = $derived(AMI_LEVELS.map(pct => ({ pct, value: amiRent(bedrooms, pct) })));
+  let p75Market = $derived(marketTicks[2].value);
+  let highRentWarning = $derived(rent > p75Market * 1.10);
 </script>
 
-<div class="card">
-  <button class="card-title collapsible" class:collapsed={!devOpen} onclick={() => devOpen = !devOpen}>
-    <span>🏗️ Development</span>
-    <span class="collapse-summary">
-      {#if !devOpen}
-        <span class="summary-text">{fmt(totalCost)} · {equityPct}% eq</span>
-      {/if}
-      <span class="chevron" class:chevron-closed={!devOpen}>▾</span>
-    </span>
-  </button>
-
-  {#if devOpen}
-    <div class="row">
-      <div class="label">Total development cost <InfoTip><p>Includes land costs, construction, and soft costs (fees, legal services, etc).</p></InfoTip></div>
-      <div class="right">
-        <span class="computed">{fmt(totalCost)}</span>
-      </div>
-    </div>
-    <div class="slider-row">
-      <input
-        type="range"
-        class="cost-slider"
-        bind:value={totalCost}
-        min="200000"
-        max="700000"
-        step="5000"
-      >
-    </div>
-    <p class="tier-desc">
-      <span class="tier-name">{tdcTier.name}.</span>
-      {tdcTier.desc}
-    </p>
-    <div class="row">
-      <div class="label">
-        Equity
-        <div class="sublabel">{equityPct}% of TDC</div>
-      </div>
-      <div class="right">
-        <MoneyInput bind:value={equity} step={5000} />
-      </div>
-    </div>
-    <div class="row">
-      <div class="label">Subsidy (capital) <InfoTip><p>Can come from federal grants, state or local grants, low-interest gap financing, or tax breaks such as PILOTs.</p><p>Subsidy is very limited, competitive, and hard to obtain.</p></InfoTip></div>
-      <div class="right">
-        <MoneyInput bind:value={capitalSubsidy} step={1000} />
-      </div>
-    </div>
-    <div class="row">
-      <div class="label">Loan needed</div>
-      <div class="right">
-        <span class="computed">{fmt(loanNeeded)}</span>
-      </div>
-    </div>
-  {/if}
+<div class="card card-inline">
+  <span class="card-title-inline">📐 Project</span>
+  <span class="inline-control">
+    <span class="label">Bedrooms</span>
+    <input type="number" class="chip chip-sm" bind:value={bedrooms} min="0" max="5" step="1">
+  </span>
 </div>
 
 <div class="card">
@@ -117,7 +155,7 @@
 
   {#if financeOpen}
     <div class="row">
-      <div class="label">Interest rate <InfoTip><p>A typical loan will be in the vicinity of the current mortgage rate. Right now that's around 6.5%.</p><p>Public sector builders can finance with bonds, which get a lower interest rate than loans. Municipal bonds can get something like 5.5%.</p><p>Subsidized loans may be available to nonprofit affordable developers at even lower rates.</p></InfoTip></div>
+      <div class="label">Interest rate <InfoTip><p>A typical loan will be in the vicinity of the current mortgage rate. Right now that's around 6.5%.</p><p>Public sector builders can finance with bonds, which get a lower interest rate than loans.</p><p>Subsidized loans may be available to nonprofit affordable developers at lower rates.</p></InfoTip></div>
       <div class="right">
         <input type="number" class="chip chip-sm" bind:value={interestRate} min="0" max="30" step="0.1">
         <span class="unit">%</span>
@@ -138,9 +176,7 @@
       </div>
     </div>
     <div class="row">
-      <div class="label">Hurdle rate <InfoTip>
-      	<p>The annual rate of return on equity that an investor requires to put up money. This is calculated "cash on cash" — annual NOI divided by equity.
-      </p><p>Investors and for-profit developers compare this to the local capitalization rate (cap rate) — the ratio of a building's annual income to its property value. If the returns are lower than local cap rates, an investor would do better buying an existing building than developing a new one.</p><p>For a nonprofit or public developer using its own reserves for equity, the hurdle rate can be zero.</p><p>Both the hurdle rate and the cap rate are expressed as annual income flows — so a 12% hurdle rate means monthly cash flow needs to be 1% of equity invested.</p></InfoTip><InfoTip icon="data"><p>Hurdle rates / cap rates can be mysterious. In New York City, they can be as low as 5% or so. In Kingston, they're likely a few points higher. <a href="https://www.caprateindex.com/cap-rate-list/" target="_blank" rel="noopener">Cap Rate Index</a> puts Kingston at about 9–10%, but I doubt it's actually that high.</p></InfoTip></div>
+      <div class="label">Hurdle rate <InfoTip><p>The annual rate of return on equity that an investor requires to put up money. For simplicity, we use calculate this "cash on cash" — annual NOI divided by equity.</p><p>For an investor or for-profit developer, this needs to compare favorably with, e.g., simply putting the money in the S&P500. Otherwise why would you go through all the hassle?</p><p>For a nonprofit or public developer using its own reserves for equity, the hurdle rate can be zero.</p></InfoTip><InfoTip icon="data"><p>Hurdle rates and cap rates can be mysterious. Acceptable cash-on-cash might vary based on how risk-averse the developer is. They're generally going to be 100-200 bips higher than the cap rate, which is the ratio of NOI to building value. Cap rates for market-rate multifamily in Kingston are probably in the vicinity of 6.5-7%. <a href="https://www.caprateindex.com/cap-rate-list/" target="_blank" rel="noopener">Cap Rate Index</a> shows a large spread for Kingston and a high average. I think that's probably a lot of influence from ETPA buildings, which trade at very high cap rates due to enormous uncertainty.</p></InfoTip></div>
       <div class="right">
         <input type="number" class="chip chip-sm" bind:value={hurdleRate} min="0" max="30" step="0.5">
         <span class="unit">%</span>
@@ -150,20 +186,59 @@
 </div>
 
 <div class="card">
-  <div class="card-title">💰 Income & expenses</div>
+  <button class="card-title collapsible" class:collapsed={!incomeOpen} onclick={() => incomeOpen = !incomeOpen}>
+    <span>💵 Income</span>
+    <span class="collapse-summary">
+      {#if !incomeOpen}
+        <span class="summary-text">{fmt(rent)} rent · {fmt(noi)} NOI</span>
+      {/if}
+      <span class="chevron" class:chevron-closed={!incomeOpen}>▾</span>
+    </span>
+  </button>
 
+  {#if incomeOpen}
   <div class="row">
-    <div class="label">Rent</div>
+    <div class="label">
+      Rent
+      {#if highRentWarning}
+        <InfoTip icon="warn"><p>You might struggle with high vacancies at this level of rent. Income from a vacant unit is $0.</p></InfoTip>
+      {/if}
+    </div>
     <div class="right">
       <span class="sign sign-in">+</span>
-      <MoneyInput bind:value={rent} step={50} />
+      <span class="computed">{fmt(rent)}</span>
     </div>
   </div>
-  <div class="row">
-    <div class="label">Subsidy (operating) <InfoTip><p>Can include Section 8, tax abatements like PILOTs or 421-a, and operating grants like the Empire State Supportive Housing Initiative.</p><p>Often tax abatements will be "capitalized" — you find a lender who will give you a loan and receive the monthly tax abatement as payment. This makes the money available up front but costs some interest.</p></InfoTip></div>
-    <div class="right">
-      <span class="sign sign-in">+</span>
-      <MoneyInput bind:value={operatingSubsidy} step={50} />
+  <div class="rent-slider-block">
+    <div class="rent-ticks rent-ticks-top">
+      <div
+        class="rent-tick-connector"
+        style="left: {rentPct(marketTicks[0].value)}%; right: {100 - rentPct(marketTicks[marketTicks.length - 1].value)}%"
+      ></div>
+      {#each marketTicks as t}
+        <div class="rent-tick" class:rent-tick-median={t.label === 'median'} style="left: {rentPct(t.value)}%">
+          <span class="rent-tick-label">{t.label}</span>
+          <span class="rent-tick-mark"></span>
+        </div>
+      {/each}
+      <span class="rent-axis-label rent-axis-label-top">market</span>
+    </div>
+    <input
+      type="range"
+      class="rent-slider"
+      bind:value={rent}
+      min={RENT_MIN}
+      max={RENT_MAX}
+      step="25"
+    />
+    <div class="rent-ticks rent-ticks-bottom">
+      {#each amiTicks as t}
+        <div class="rent-tick" style="left: {rentPct(t.value)}%">
+          <span class="rent-tick-mark"></span>
+          <span class="rent-tick-label">{t.pct}%</span>
+        </div>
+      {/each}
+      <span class="rent-axis-label rent-axis-label-bottom">AMI</span>
     </div>
   </div>
   <div class="row">
@@ -173,24 +248,119 @@
       <MoneyInput bind:value={opCosts} step={50} />
     </div>
   </div>
-  <div class="row">
-    <div class="label">Property tax <InfoTip><p>If you get a property tax abatement, you can reduce this number, or add the value to operating subsidy, or add the capitalized value to capital subsidy. Whichever you like.</p></InfoTip></div>
-    <div class="right">
-      <span class="sign sign-out">−</span>
-      <MoneyInput bind:value={propertyTax} step={25} />
-    </div>
-  </div>
 
-  <div class="result-row" class:result-ok={noiSufficient} class:result-warn={!noiSufficient}>
+  <div class="result-row">
     <span class="result-label">Net Operating Income</span>
     <span class="result-value">
       <span class="sign sign-eq">=</span>{fmt(noi)}
     </span>
   </div>
-  {#if noiSufficient}
-    <p class="result-message ok">NOI is enough to cover the loan!</p>
+
+  <div class="row">
+    <div class="label">
+      <span class="label-strong">Maximum Supportable Loan</span>
+      <div class="sublabel">based on NOI × {dcr} DCR</div>
+    </div>
+    <div class="right">
+      <span class="computed">{fmt(maxLoan)}</span>
+    </div>
+  </div>
+  {/if}
+</div>
+
+<div class="card">
+  <button class="card-title collapsible" class:collapsed={!devOpen} onclick={() => devOpen = !devOpen}>
+    <span>🏗️ Development</span>
+    <span class="collapse-summary">
+      {#if !devOpen}
+        <span class="summary-text">{fmt(totalCost)} TDC · {fmt(loanNeeded)} loan</span>
+      {/if}
+      <span class="chevron" class:chevron-closed={!devOpen}>▾</span>
+    </span>
+  </button>
+
+  {#if devOpen}
+
+  <div class="row">
+    <div class="label">Cost per square foot</div>
+    <div class="right">
+      <span class="computed">${costPerSqft}</span>
+      <span class="unit">/sqft</span>
+    </div>
+  </div>
+  <div class="slider-row">
+    <input
+      type="range"
+      class="cost-slider"
+      bind:value={costPerSqft}
+      min="240"
+      max="700"
+      step="5"
+    >
+  </div>
+  <p class="tier-desc">
+    <span class="tier-name">{tdcTier.name}.</span>
+    {tdcTier.desc}
+  </p>
+  <div class="row">
+    <div class="label">
+      Total development cost
+      <div class="sublabel">× {sqft.toLocaleString()} sqft</div>
+    </div>
+    <div class="right">
+      <span class="sign sign-in">+</span>
+      <span class="computed">{fmt(totalCost)}</span>
+    </div>
+  </div>
+  <div class="row">
+    <div class="label">
+      Equity
+      <div class="sublabel">{equityPct}% of total</div>
+    </div>
+    <div class="right">
+      <span class="sign sign-out">−</span>
+      <MoneyInput bind:value={equity} step={5000} />
+    </div>
+  </div>
+  <div class="row">
+    <div class="label">Subsidy</div>
+    <div class="right">
+      <span class="sign sign-out">−</span>
+      <MoneyInput bind:value={subsidy} step={5000} />
+    </div>
+  </div>
+
+  <div class="result-row">
+    <span class="result-label">Loan needed</span>
+    <span class="result-value">
+      <span class="sign sign-eq">=</span>{fmt(loanNeeded)}
+    </span>
+  </div>
+  {/if}
+</div>
+
+<div class="card">
+  <div class="card-title">🧮 Results</div>
+
+  <div class="row">
+    <div class="label">Loan needed</div>
+    <div class="right">
+      <span class="computed">{fmt(loanNeeded)}</span>
+      <span class="unit">out of available</span>
+      <span class="computed">{fmt(maxLoan)}</span>
+    </div>
+  </div>
+
+  <div class="result-row" class:result-ok={loanSupportable} class:result-warn={!loanSupportable}>
+    <span class="result-label">Gap</span>
+    <span class="result-value">
+      <span class="sign sign-eq">=</span>{fmt(gap)}
+    </span>
+  </div>
+  {#if loanSupportable}
+    <p class="result-message ok">You can cover development costs!</p>
   {:else}
-    <p class="result-message warn">NOI is less than the loan requirement of {fmt(requiredNoi)}</p>
+    <p class="result-message warn">You need {fmt(gap)} more in equity or subsidy.</p>
   {/if}
 
   <div class="row">
@@ -211,14 +381,21 @@
     </span>
   </div>
   {#if cfSufficient}
-    <p class="result-message ok">Cash flow meets the {hurdleRate}% hurdle rate!</p>
+    <p class="result-message ok">Cash on cash return on equity is {cocReturn.toFixed(1)}% — you can repay your investors!</p>
   {:else}
-    <p class="result-message warn">Cash flow is less than the hurdle rate requirement of {fmt(requiredCashFlow)}</p>
+    <p class="result-message warn">Cash on cash return is {cocReturn.toFixed(1)}% — below the {hurdleRate}% hurdle.</p>
   {/if}
+
+  <button class="reset-row" onclick={resetAll} aria-label="Reset to defaults">
+    <span class="reset-label">Reset to defaults</span>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </svg>
+  </button>
 </div>
 
 <style>
-
   .card {
     background: #ffffff;
     border: 1px solid #e6e2dc;
@@ -253,7 +430,6 @@
     padding: 0 0 8px;
     margin-bottom: 12px;
   }
-
   .collapsible.collapsed {
     margin-bottom: 0;
     border-bottom: none;
@@ -265,7 +441,6 @@
     align-items: center;
     gap: 6px;
   }
-
   .summary-text {
     font-family: 'Inter', sans-serif;
     font-size: 11.5px;
@@ -273,20 +448,13 @@
     color: #8a847e;
     font-variant-numeric: tabular-nums;
   }
-
   .chevron {
     font-size: 12px;
     color: #b8b2ab;
     transition: transform 0.2s ease;
   }
-
   .chevron-closed {
     transform: rotate(-90deg);
-  }
-
-  .divider {
-    border-top: 1px solid #e6e2dc;
-    margin: 4px 0;
   }
 
   .row {
@@ -299,6 +467,11 @@
   .label {
     font-size: 14px;
     color: #4a4642;
+  }
+
+  .label-strong {
+    font-family: 'Cardo', serif;
+    font-weight: 700;
   }
 
   .sublabel {
@@ -365,6 +538,133 @@
     cursor: pointer;
   }
 
+  /* Inline (one-line) card */
+  .card-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+  }
+  .card-title-inline {
+    font-family: 'Cardo', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: #2b2724;
+  }
+  .inline-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Rent slider with AMI / market tick marks */
+  .rent-slider-block {
+    padding: 2px 0 6px;
+    position: relative;
+  }
+
+  .rent-ticks {
+    position: relative;
+    height: 22px;
+  }
+
+  .rent-tick {
+    position: absolute;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 9.5px;
+    color: #8a847e;
+    line-height: 1.2;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    padding: 0 4px;
+  }
+
+  .rent-ticks-top .rent-tick .rent-tick-label {
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    pointer-events: none;
+  }
+  .rent-ticks-top .rent-tick:hover {
+    z-index: 1;
+  }
+  .rent-ticks-top .rent-tick:hover .rent-tick-label {
+    opacity: 1;
+  }
+
+  .rent-tick-median .rent-tick-mark {
+    background: #8a847e;
+  }
+  .rent-tick-median .rent-tick-label {
+    color: #6a645e;
+  }
+
+  .rent-tick-connector {
+    position: absolute;
+    bottom: 3px;
+    height: 1px;
+    background: #b8b2ab;
+    pointer-events: none;
+  }
+
+  .rent-tick-mark {
+    width: 1px;
+    height: 5px;
+    background: #b8b2ab;
+    margin: 2px 0;
+  }
+
+  .rent-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e6e2dc;
+    border-radius: 3px;
+    outline: none;
+    display: block;
+    margin: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .rent-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3f6b8a;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .rent-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3f6b8a;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .rent-axis-label {
+    position: absolute;
+    right: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 9.5px;
+    color: #8a847e;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .rent-axis-label-top { top: 0; }
+  .rent-axis-label-bottom { bottom: 0; }
+
   .tier-desc {
     font-size: 11.5px;
     color: #8a847e;
@@ -430,5 +730,29 @@
   }
   .result-message.warn {
     color: #b87351;
+  }
+
+  .reset-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    color: #b8b2ab;
+    cursor: pointer;
+    padding: 8px 0 0;
+    margin-left: auto;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    transition: color 0.15s ease;
+    width: 100%;
+  }
+  .reset-row:hover {
+    color: #8a847e;
+  }
+  .reset-label {
+    line-height: 1;
+    font-style: italic;
   }
 </style>
