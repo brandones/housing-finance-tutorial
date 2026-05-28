@@ -17,7 +17,10 @@ for app in apps/*/; do
   echo "==> Building $app_name"
   (
     cd "$app"
-    npm ci --no-audit --no-fund
+    # npm install (not ci) — tolerant of cross-platform optional deps
+    # missing from the lockfile (npm install on macOS doesn't always emit
+    # Linux WASM-runtime entries that CI needs).
+    npm install --no-audit --no-fund
     npm run build
   )
   mkdir -p "dist/$app_name"
