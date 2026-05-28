@@ -20,6 +20,21 @@
   $effect(() => {
     try { localStorage.setItem(STAGE_KEY, String(stage)); } catch {}
   });
+
+  $effect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    const post = () => {
+      const h = document.documentElement.scrollHeight;
+      window.parent.postMessage(
+        { type: 'iframe-height', source: 'build-apartment-kingston', height: h },
+        '*'
+      );
+    };
+    const ro = new ResizeObserver(post);
+    ro.observe(document.body);
+    post();
+    return () => ro.disconnect();
+  });
   let touchedInputs = new Set();
   const INTERACTION_THRESHOLD = 2;
   let hasInteracted = $derived(touchedCount >= INTERACTION_THRESHOLD);
