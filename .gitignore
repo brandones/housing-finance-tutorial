@@ -1,6 +1,5 @@
 node_modules/
 dist/
-dist-embed/
 .venv/
 .vite/
 .DS_Store
