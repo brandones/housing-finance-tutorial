@@ -1,59 +1,29 @@
 <script>
   import InfoTip from './InfoTip.svelte';
   import MoneyInput from './MoneyInput.svelte';
+  import { loadVar, saveVar, clearAll } from './storage.js';
 
-  const STORAGE_KEY = 'model3-inputs';
   const SQFT_BY_BR = { 0: 500, 1: 700, 2: 900, 3: 1100, 4: 1300, 5: 1500 };
-  const DEFAULTS = {
-    bedrooms: 2,
-    sqft: 900,
-    equity: 60000,
-    subsidy: 0,
-    rent: 2500,
-    opCosts: 500,
-    propertyTax: 250,
-    operatingSubsidy: 0,
-    interestRate: 6.5,
-    loanTerm: 35,
-    dcr: 1.2,
-    hurdleRate: 8,
-    landCostPerSqft: 45,
-    sitePrepPerSqft: 25,
-    hardCostPerSqft: 200,
-    softCostPerSqft: 30,
-    wageLevel: 'open', // 'open' | 'davis-bacon' | 'prevailing'
-  };
+  const initialBedrooms = loadVar('bedrooms', 2);
+  const defaultSqftForBR = SQFT_BY_BR[initialBedrooms] ?? 900;
 
-  function loadStored() {
-    try {
-      const m1 = JSON.parse(localStorage.getItem('model1-inputs') || '{}');
-      const m2 = JSON.parse(localStorage.getItem('model2-inputs') || '{}');
-      const m3 = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      return { ...DEFAULTS, ...m1, ...m2, ...m3 };
-    } catch {
-      return { ...DEFAULTS };
-    }
-  }
-  const stored = loadStored();
-  const defaultSqftForBR = SQFT_BY_BR[stored.bedrooms] ?? 900;
-
-  let bedrooms = $state(stored.bedrooms);
-  let sqft = $state(stored.sqft ?? defaultSqftForBR);
-  let equity = $state(stored.equity);
-  let subsidy = $state(stored.subsidy);
-  let rent = $state(stored.rent);
-  let opCosts = $state(stored.opCosts);
-  let propertyTax = $state(stored.propertyTax);
-  let operatingSubsidy = $state(stored.operatingSubsidy);
-  let interestRate = $state(stored.interestRate);
-  let loanTerm = $state(stored.loanTerm);
-  let dcr = $state(stored.dcr);
-  let hurdleRate = $state(stored.hurdleRate);
-  let landCostPerSqft = $state(stored.landCostPerSqft);
-  let sitePrepPerSqft = $state(stored.sitePrepPerSqft);
-  let hardCostPerSqft = $state(stored.hardCostPerSqft);
-  let softCostPerSqft = $state(stored.softCostPerSqft);
-  let wageLevel = $state(stored.wageLevel);
+  let bedrooms = $state(initialBedrooms);
+  let sqft = $state(loadVar('sqft', defaultSqftForBR));
+  let equity = $state(loadVar('equity', 60000));
+  let subsidy = $state(loadVar('subsidy', 0));
+  let rent = $state(loadVar('rent', 2500));
+  let opexNoTaxes = $state(loadVar('opexNoTaxes', 500));
+  let propertyTax = $state(loadVar('propertyTax', 250));
+  let operatingSubsidy = $state(loadVar('operatingSubsidy', 0));
+  let interestRate = $state(loadVar('interestRate', 6.5));
+  let loanTerm = $state(loadVar('loanTerm', 35));
+  let dcr = $state(loadVar('dcr', 1.2));
+  let hurdleRate = $state(loadVar('hurdleRate', 8));
+  let landCostPerSqft = $state(loadVar('landCostPerSqft', 45));
+  let sitePrepPerSqft = $state(loadVar('sitePrepPerSqft', 25));
+  let hardCostPerSqft = $state(loadVar('hardCostPerSqft', 200));
+  let softCostPerSqft = $state(loadVar('softCostPerSqft', 30));
+  let wageLevel = $state(loadVar('wageLevel', 'open')); // 'open' | 'davis-bacon' | 'prevailing'
 
   let projectOpen = $state(true);
   let financeOpen = $state(false);
@@ -79,26 +49,28 @@
   let totalCost = $derived(costPerSqft * sqft);
 
   $effect(() => {
-    try {
-      // Shared inputs live in model1-inputs; cost-per-sqft synced from breakdown so M1/M2 reflect it
-      localStorage.setItem('model1-inputs', JSON.stringify({
-        bedrooms, sqft, costPerSqft: Math.round(costPerSqft), equity, subsidy, rent, opCosts, propertyTax, operatingSubsidy,
-      }));
-      // Finance inputs live in model2-inputs
-      localStorage.setItem('model2-inputs', JSON.stringify({
-        interestRate, loanTerm, dcr, hurdleRate,
-      }));
-      // Dev breakdown lives here
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        landCostPerSqft, sitePrepPerSqft, hardCostPerSqft, softCostPerSqft, wageLevel,
-      }));
-    } catch {}
+    saveVar('bedrooms', bedrooms);
+    saveVar('sqft', sqft);
+    saveVar('costPerSqft', Math.round(costPerSqft));
+    saveVar('equity', equity);
+    saveVar('subsidy', subsidy);
+    saveVar('rent', rent);
+    saveVar('opexNoTaxes', opexNoTaxes);
+    saveVar('propertyTax', propertyTax);
+    saveVar('operatingSubsidy', operatingSubsidy);
+    saveVar('interestRate', interestRate);
+    saveVar('loanTerm', loanTerm);
+    saveVar('dcr', dcr);
+    saveVar('hurdleRate', hurdleRate);
+    saveVar('landCostPerSqft', landCostPerSqft);
+    saveVar('sitePrepPerSqft', sitePrepPerSqft);
+    saveVar('hardCostPerSqft', hardCostPerSqft);
+    saveVar('softCostPerSqft', softCostPerSqft);
+    saveVar('wageLevel', wageLevel);
   });
 
   function resetAll() {
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('model')) localStorage.removeItem(key);
-    }
+    clearAll();
     location.reload();
   }
 
@@ -152,7 +124,7 @@
   let sitePrepPct = $derived(totalCost > 0 ? Math.round(sitePrepPerSqft * sqft / totalCost * 100) : 0);
   let softPct = $derived(totalCost > 0 ? Math.round(softCostPerSqft * sqft / totalCost * 100) : 0);
 
-  let noi = $derived(rent - opCosts - propertyTax + operatingSubsidy);
+  let noi = $derived(rent - opexNoTaxes - propertyTax + operatingSubsidy);
   let maxDebtService = $derived(noi / dcr);
   let maxLoan = $derived(pv(interestRate / 100 / 12, loanTerm * 12, maxDebtService));
   let equityPct = $derived((equity / totalCost * 100).toFixed(0));
@@ -305,7 +277,7 @@
     <div class="label">Operating costs <InfoTip><p>Utilities, insurance, and maintenance. Normally this also includes property tax. We've split that out here for illustrative purposes.</p></InfoTip></div>
     <div class="right">
       <span class="sign sign-out">−</span>
-      <MoneyInput bind:value={opCosts} step={50} />
+      <MoneyInput bind:value={opexNoTaxes} step={50} />
     </div>
   </div>
   <div class="row">

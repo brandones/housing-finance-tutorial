@@ -1,42 +1,18 @@
 <script>
   import InfoTip from './InfoTip.svelte';
   import MoneyInput from './MoneyInput.svelte';
+  import { loadVar, saveVar, clearAll } from './storage.js';
 
-  const STORAGE_KEY = 'model2-inputs';
-  const DEFAULTS = {
-    bedrooms: 2,
-    costPerSqft: 300,
-    equity: 60000,
-    subsidy: 0,
-    rent: 2500,
-    opCosts: 750,
-    interestRate: 6.5,
-    loanTerm: 35,
-    dcr: 1.2,
-    hurdleRate: 8,
-  };
-
-  function loadStored() {
-    try {
-      const m1 = JSON.parse(localStorage.getItem('model1-inputs') || '{}');
-      const m2 = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      return { ...DEFAULTS, ...m1, ...m2 };
-    } catch {
-      return { ...DEFAULTS };
-    }
-  }
-  const stored = loadStored();
-
-  let bedrooms = $state(stored.bedrooms);
-  let costPerSqft = $state(stored.costPerSqft);
-  let equity = $state(stored.equity);
-  let subsidy = $state(stored.subsidy);
-  let rent = $state(stored.rent);
-  let opCosts = $state(stored.opCosts);
-  let interestRate = $state(stored.interestRate);
-  let loanTerm = $state(stored.loanTerm);
-  let dcr = $state(stored.dcr);
-  let hurdleRate = $state(stored.hurdleRate);
+  let bedrooms = $state(loadVar('bedrooms', 2));
+  let costPerSqft = $state(loadVar('costPerSqft', 300));
+  let equity = $state(loadVar('equity', 60000));
+  let subsidy = $state(loadVar('subsidy', 0));
+  let rent = $state(loadVar('rent', 2500));
+  let opCosts = $state(loadVar('opCosts', 750));
+  let interestRate = $state(loadVar('interestRate', 6.5));
+  let loanTerm = $state(loadVar('loanTerm', 35));
+  let dcr = $state(loadVar('dcr', 1.2));
+  let hurdleRate = $state(loadVar('hurdleRate', 8));
 
   let financeOpen = $state(true);
   let incomeOpen = $state(true);
@@ -48,21 +24,20 @@
   let totalCost = $derived(costPerSqft * sqft);
 
   $effect(() => {
-    try {
-      // Shared inputs live in model1-inputs so they carry across all models
-      localStorage.setItem('model1-inputs', JSON.stringify({
-        bedrooms, costPerSqft, equity, subsidy, rent, opCosts,
-      }));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        interestRate, loanTerm, dcr, hurdleRate,
-      }));
-    } catch {}
+    saveVar('bedrooms', bedrooms);
+    saveVar('costPerSqft', costPerSqft);
+    saveVar('equity', equity);
+    saveVar('subsidy', subsidy);
+    saveVar('rent', rent);
+    saveVar('opCosts', opCosts);
+    saveVar('interestRate', interestRate);
+    saveVar('loanTerm', loanTerm);
+    saveVar('dcr', dcr);
+    saveVar('hurdleRate', hurdleRate);
   });
 
   function resetAll() {
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('model')) localStorage.removeItem(key);
-    }
+    clearAll();
     location.reload();
   }
 

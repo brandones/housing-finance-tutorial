@@ -1,32 +1,14 @@
 <script>
   import InfoTip from './InfoTip.svelte';
   import MoneyInput from './MoneyInput.svelte';
+  import { loadVar, saveVar, clearAll } from './storage.js';
 
-  const STORAGE_KEY = 'model1-inputs';
-  const DEFAULTS = {
-    bedrooms: 2,
-    costPerSqft: 300,
-    equity: 60000,
-    subsidy: 0,
-    rent: 2500,
-    opCosts: 750,
-  };
-
-  function loadStored() {
-    try {
-      return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') };
-    } catch {
-      return { ...DEFAULTS };
-    }
-  }
-  const stored = loadStored();
-
-  let bedrooms = $state(stored.bedrooms);
-  let costPerSqft = $state(stored.costPerSqft);
-  let equity = $state(stored.equity);
-  let subsidy = $state(stored.subsidy);
-  let rent = $state(stored.rent);
-  let opCosts = $state(stored.opCosts);
+  let bedrooms = $state(loadVar('bedrooms', 2));
+  let costPerSqft = $state(loadVar('costPerSqft', 300));
+  let equity = $state(loadVar('equity', 60000));
+  let subsidy = $state(loadVar('subsidy', 0));
+  let rent = $state(loadVar('rent', 2500));
+  let opCosts = $state(loadVar('opCosts', 750));
 
   let incomeOpen = $state(true);
   let devOpen = $state(true);
@@ -37,15 +19,16 @@
   let totalCost = $derived(costPerSqft * sqft);
 
   $effect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ bedrooms, costPerSqft, equity, subsidy, rent, opCosts }));
-    } catch {}
+    saveVar('bedrooms', bedrooms);
+    saveVar('costPerSqft', costPerSqft);
+    saveVar('equity', equity);
+    saveVar('subsidy', subsidy);
+    saveVar('rent', rent);
+    saveVar('opCosts', opCosts);
   });
 
   function resetAll() {
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('model')) localStorage.removeItem(key);
-    }
+    clearAll();
     location.reload();
   }
 

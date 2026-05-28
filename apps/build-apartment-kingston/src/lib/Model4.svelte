@@ -1,60 +1,29 @@
 <script>
   import InfoTip from './InfoTip.svelte';
   import MoneyInput from './MoneyInput.svelte';
+  import { loadVar, saveVar, clearAll } from './storage.js';
 
-  const STORAGE_KEY = 'model4-inputs';
   const SQFT_BY_BR = { 0: 500, 1: 700, 2: 900, 3: 1100, 4: 1300, 5: 1500 };
-  const DEFAULTS = {
-    bedrooms: 2,
-    sqft: 900,
-    equity: 60000,
-    subsidy: 0,
-    rent: 2500,
-    opCosts: 500,
-    propertyTax: 0,
-    operatingSubsidy: 0,
-    interestRate: 5.5,
-    loanTerm: 35,
-    dcr: 1.15,
-    hurdleRate: 8, // preserved for cross-model consistency but unused
-    landCostPerSqft: 20,
-    sitePrepPerSqft: 20,
-    hardCostPerSqft: 200,
-    softCostPerSqft: 30,
-    wageLevel: 'prevailing',
-  };
+  const initialBedrooms = loadVar('bedrooms', 2);
+  const defaultSqftForBR = SQFT_BY_BR[initialBedrooms] ?? 900;
 
-  function loadStored() {
-    try {
-      const m1 = JSON.parse(localStorage.getItem('model1-inputs') || '{}');
-      const m2 = JSON.parse(localStorage.getItem('model2-inputs') || '{}');
-      const m3 = JSON.parse(localStorage.getItem('model3-inputs') || '{}');
-      const m4 = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      return { ...DEFAULTS, ...m1, ...m2, ...m3, ...m4 };
-    } catch {
-      return { ...DEFAULTS };
-    }
-  }
-  const stored = loadStored();
-  const defaultSqftForBR = SQFT_BY_BR[stored.bedrooms] ?? 900;
-
-  let bedrooms = $state(stored.bedrooms);
-  let sqft = $state(stored.sqft ?? defaultSqftForBR);
-  let equity = $state(stored.equity);
-  let subsidy = $state(stored.subsidy);
-  let rent = $state(stored.rent);
-  let opCosts = $state(stored.opCosts);
-  let propertyTax = $state(stored.propertyTax);
-  let operatingSubsidy = $state(stored.operatingSubsidy);
-  let interestRate = $state(stored.interestRate);
-  let loanTerm = $state(stored.loanTerm);
-  let dcr = $state(stored.dcr);
-  let hurdleRate = $state(stored.hurdleRate); // preserved
-  let landCostPerSqft = $state(stored.landCostPerSqft);
-  let sitePrepPerSqft = $state(stored.sitePrepPerSqft);
-  let hardCostPerSqft = $state(stored.hardCostPerSqft);
-  let softCostPerSqft = $state(stored.softCostPerSqft);
-  let wageLevel = $state(stored.wageLevel);
+  let bedrooms = $state(initialBedrooms);
+  let sqft = $state(loadVar('sqft', defaultSqftForBR));
+  let equity = $state(loadVar('equity', 60000));
+  let subsidy = $state(loadVar('subsidy', 0));
+  let rent = $state(loadVar('rent', 2500));
+  let opexNoTaxes = $state(loadVar('opexNoTaxes', 500));
+  let propertyTaxSocial = $state(loadVar('propertyTaxSocial', 0));
+  let operatingSubsidy = $state(loadVar('operatingSubsidy', 0));
+  let interestRateSocial = $state(loadVar('interestRateSocial', 5.5));
+  let loanTerm = $state(loadVar('loanTerm', 35));
+  let dcr = $state(loadVar('dcr', 1.15));
+  let hurdleRate = $state(loadVar('hurdleRate', 8)); // preserved for cross-model storage; not shown in M4
+  let landCostPerSqftSocial = $state(loadVar('landCostPerSqftSocial', 20));
+  let sitePrepPerSqft = $state(loadVar('sitePrepPerSqft', 20));
+  let hardCostPerSqft = $state(loadVar('hardCostPerSqft', 200));
+  let softCostPerSqft = $state(loadVar('softCostPerSqft', 30));
+  let wageLevel = $state(loadVar('wageLevel', 'prevailing'));
 
   let projectOpen = $state(true);
   let financeOpen = $state(true);
@@ -76,27 +45,32 @@
   };
 
   let effectiveHardCost = $derived(hardCostPerSqft * wageMultipliers[wageLevel]);
-  let costPerSqft = $derived(landCostPerSqft + sitePrepPerSqft + effectiveHardCost + softCostPerSqft);
+  let costPerSqft = $derived(landCostPerSqftSocial + sitePrepPerSqft + effectiveHardCost + softCostPerSqft);
   let totalCost = $derived(costPerSqft * sqft);
 
   $effect(() => {
-    try {
-      localStorage.setItem('model1-inputs', JSON.stringify({
-        bedrooms, sqft, costPerSqft: Math.round(costPerSqft), equity, subsidy, rent, opCosts, propertyTax, operatingSubsidy,
-      }));
-      localStorage.setItem('model2-inputs', JSON.stringify({
-        interestRate, loanTerm, dcr, hurdleRate,
-      }));
-      localStorage.setItem('model3-inputs', JSON.stringify({
-        landCostPerSqft, sitePrepPerSqft, hardCostPerSqft, softCostPerSqft, wageLevel,
-      }));
-    } catch {}
+    saveVar('bedrooms', bedrooms);
+    saveVar('sqft', sqft);
+    saveVar('costPerSqft', Math.round(costPerSqft));
+    saveVar('equity', equity);
+    saveVar('subsidy', subsidy);
+    saveVar('rent', rent);
+    saveVar('opexNoTaxes', opexNoTaxes);
+    saveVar('propertyTaxSocial', propertyTaxSocial);
+    saveVar('operatingSubsidy', operatingSubsidy);
+    saveVar('interestRateSocial', interestRateSocial);
+    saveVar('loanTerm', loanTerm);
+    saveVar('dcr', dcr);
+    saveVar('hurdleRate', hurdleRate);
+    saveVar('landCostPerSqftSocial', landCostPerSqftSocial);
+    saveVar('sitePrepPerSqft', sitePrepPerSqft);
+    saveVar('hardCostPerSqft', hardCostPerSqft);
+    saveVar('softCostPerSqft', softCostPerSqft);
+    saveVar('wageLevel', wageLevel);
   });
 
   function resetAll() {
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('model')) localStorage.removeItem(key);
-    }
+    clearAll();
     location.reload();
   }
 
@@ -146,18 +120,18 @@
       : { name: 'Luxury', desc: 'Parking structure, premium millwork and stone, high-end appliances, oak floors, amenities. Steel or concrete for taller buildings.' }
   );
 
-  let landPct = $derived(totalCost > 0 ? Math.round(landCostPerSqft * sqft / totalCost * 100) : 0);
+  let landPct = $derived(totalCost > 0 ? Math.round(landCostPerSqftSocial * sqft / totalCost * 100) : 0);
   let sitePrepPct = $derived(totalCost > 0 ? Math.round(sitePrepPerSqft * sqft / totalCost * 100) : 0);
   let softPct = $derived(totalCost > 0 ? Math.round(softCostPerSqft * sqft / totalCost * 100) : 0);
 
-  let noi = $derived(rent - opCosts - propertyTax + operatingSubsidy);
+  let noi = $derived(rent - opexNoTaxes - propertyTaxSocial + operatingSubsidy);
   let maxDebtService = $derived(noi / dcr);
-  let maxLoan = $derived(pv(interestRate / 100 / 12, loanTerm * 12, maxDebtService));
+  let maxLoan = $derived(pv(interestRateSocial / 100 / 12, loanTerm * 12, maxDebtService));
   let equityPct = $derived((equity / totalCost * 100).toFixed(0));
   let loanNeeded = $derived(totalCost - equity - subsidy);
   let gap = $derived(Math.max(0, loanNeeded - maxLoan));
   let loanSupportable = $derived(gap <= 0);
-  let debtService = $derived(pmt(interestRate / 100 / 12, loanTerm * 12, loanNeeded));
+  let debtService = $derived(pmt(interestRateSocial / 100 / 12, loanTerm * 12, loanNeeded));
   let cashFlow = $derived(noi - debtService);
   let cfSufficient = $derived(cashFlow >= 0);
 
@@ -203,7 +177,7 @@
     <span>📈 Finance</span>
     <span class="collapse-summary">
       {#if !financeOpen}
-        <span class="summary-text">{interestRate}% · {loanTerm}yr · {dcr}×</span>
+        <span class="summary-text">{interestRateSocial}% · {loanTerm}yr · {dcr}×</span>
       {/if}
       <span class="chevron" class:chevron-closed={!financeOpen}>▾</span>
     </span>
@@ -213,7 +187,7 @@
     <div class="row">
       <div class="label">Interest rate <InfoTip><p>Public developers can finance with municipal bonds, which carry lower interest rates than commercial loans. After bond insurance, this will likely come to about 5.5% instead of the 6.5%+ a private developer would pay.</p></InfoTip></div>
       <div class="right">
-        <input type="number" class="chip chip-sm" bind:value={interestRate} min="0" max="30" step="0.1">
+        <input type="number" class="chip chip-sm" bind:value={interestRateSocial} min="0" max="30" step="0.1">
         <span class="unit">%</span>
       </div>
     </div>
@@ -294,14 +268,14 @@
     <div class="label">Operating costs</div>
     <div class="right">
       <span class="sign sign-out">−</span>
-      <MoneyInput bind:value={opCosts} step={50} />
+      <MoneyInput bind:value={opexNoTaxes} step={50} />
     </div>
   </div>
   <div class="row">
     <div class="label">Property tax <InfoTip><p>Publicly held properties are generally exempt from property tax.</p></InfoTip></div>
     <div class="right">
       <span class="sign sign-out">−</span>
-      <MoneyInput bind:value={propertyTax} step={25} />
+      <MoneyInput bind:value={propertyTaxSocial} step={25} />
     </div>
   </div>
   <div class="row">
@@ -349,7 +323,7 @@
         <div class="sublabel">{landPct}% of TDC</div>
       </div>
       <div class="right">
-        <MoneyInput class="chip chip-sm" bind:value={landCostPerSqft} step={5} />
+        <MoneyInput class="chip chip-sm" bind:value={landCostPerSqftSocial} step={5} />
         <span class="unit">/sqft</span>
       </div>
     </div>
@@ -479,7 +453,7 @@
   <div class="row">
     <div class="label">
       Debt service
-      <div class="sublabel">{interestRate}% / {loanTerm} yr</div>
+      <div class="sublabel">{interestRateSocial}% / {loanTerm} yr</div>
     </div>
     <div class="right">
       <span class="sign sign-out">−</span>
