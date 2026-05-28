@@ -24,7 +24,7 @@
   $effect(() => {
     if (typeof window === 'undefined' || window.parent === window) return;
     const post = () => {
-      const h = document.documentElement.scrollHeight;
+      const h = Math.ceil(document.documentElement.getBoundingClientRect().height);
       window.parent.postMessage(
         { type: 'iframe-height', source: 'build-apartment-kingston', height: h },
         '*'
