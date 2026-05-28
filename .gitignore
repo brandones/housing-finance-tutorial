@@ -3,3 +3,4 @@ dist/
 .venv/
 .vite/
 .DS_Store
+.firebase/

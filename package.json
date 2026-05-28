@@ -2,6 +2,7 @@
   "name": "housing-finance-tutorial",
   "private": true,
   "scripts": {
-    "build": "bash build.sh"
+    "build": "bash build.sh",
+    "deploy": "firebase deploy --only hosting:rentier-apps"
   }
 }

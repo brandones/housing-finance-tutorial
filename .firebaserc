@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "rent-and-rentier"
+  },
+  "targets": {
+    "rent-and-rentier": {
+      "hosting": {
+        "apps": [
+          "rentier-apps"
+        ],
+        "rentier-apps": [
+          "rent-and-rentier"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
