@@ -265,8 +265,6 @@
   }
 
   footer {
-    margin-top: 24px;
-    padding-top: 12px;
     font-family: 'Inter', sans-serif;
     font-size: 11px;
     color: #8a847e;
